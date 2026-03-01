@@ -43,15 +43,89 @@
             }
 
             const defaultTelegramLink = "https://t.me/korovany/1494";
+            const POST_CACHE_STORAGE_KEY = "tg-reader-post-cache-v1";
             let currentChannel = null;
             let currentPostId = null;
             let lastCanonicalLink = null;
 
-            function updateHistory(link, replace = false) {
-                const url = link
-                    ? `${window.location.pathname}?link=${encodeURIComponent(link)}`
+            function buildCacheKey(channel, postId) {
+                return `${channel}/${postId}`;
+            }
+
+            function readPostCache(channel, postId) {
+                if (!channel || !postId) return null;
+                try {
+                    const stored = localStorage.getItem(POST_CACHE_STORAGE_KEY);
+                    if (!stored) return null;
+                    const parsed = JSON.parse(stored);
+                    return parsed[buildCacheKey(channel, postId)] ?? null;
+                } catch (error) {
+                    console.warn("Unable to read post cache:", error);
+                    return null;
+                }
+            }
+
+            function persistPostCache(channel, postId, data, options = {}) {
+                if (!channel || !postId) return;
+                try {
+                    const stored = localStorage.getItem(POST_CACHE_STORAGE_KEY);
+                    const cache = stored ? JSON.parse(stored) : {};
+                    const key = buildCacheKey(channel, postId);
+                    const existing = cache[key] ?? {};
+                    cache[key] = {
+                        data,
+                        cachedAt:
+                            options.cachedAt ?? existing.cachedAt ?? Date.now(),
+                        lastOpened: options.lastOpened ?? Date.now(),
+                    };
+                    localStorage.setItem(
+                        POST_CACHE_STORAGE_KEY,
+                        JSON.stringify(cache),
+                    );
+                } catch (error) {
+                    console.warn("Unable to persist post cache:", error);
+                }
+            }
+
+            function updatePostFooter(channel, postId) {
+                const footer = document.getElementById("postFooter");
+                if (!footer) return;
+                const cached = readPostCache(channel, postId);
+                if (!cached) {
+                    footer.textContent = "";
+                    return;
+                }
+                const lastOpened =
+                    cached.lastOpened ?? cached.cachedAt ?? Date.now();
+                const formatted = new Date(lastOpened).toLocaleString();
+                footer.textContent = `Last opened: ${formatted}`;
+            }
+
+            function setStatusMessage(text = "", variant = "error") {
+                const statusEl = document.getElementById("errorMessage");
+                if (!statusEl) return;
+                if (!text) {
+                    statusEl.textContent = "";
+                    statusEl.classList.remove("info");
+                    statusEl.classList.remove("error");
+                    statusEl.style.display = "none";
+                    return;
+                }
+                statusEl.textContent = text;
+                statusEl.classList.toggle("info", variant === "info");
+                statusEl.classList.toggle("error", variant !== "info");
+                statusEl.style.display = "block";
+            }
+
+            function updateHistory(channel, postId, replace = false) {
+                const params = new URLSearchParams();
+                if (channel) params.set("channel", channel);
+                if (postId) params.set("post", postId);
+                const query = params.toString();
+                const url = query
+                    ? `${window.location.pathname}?${query}`
                     : window.location.pathname;
-                const state = { link };
+                const state = { channel, postId };
                 if (replace) {
                     window.history.replaceState(state, "", url);
                 } else {
@@ -204,30 +278,34 @@
                 }
             }
 
-            function renderPostContent(postData, normalizedLink) {
-                const errorMessage = document.getElementById("errorMessage");
-                errorMessage.style.display = "none";
-                if (postData.error) {
-                    errorMessage.textContent = postData.error;
-                    errorMessage.style.display = "block";
-                    document.getElementById("postBody").innerHTML = "";
-                    updatePostMeta(normalizedLink ?? lastCanonicalLink, null);
-                    return;
-                }
+            function renderPostContent(
+                postData,
+                normalizedLink,
+                { overrideStatusText = null, statusVariant = "error" } = {},
+            ) {
+                const canonicalLink = normalizedLink ?? lastCanonicalLink;
+                const parsed = parseTelegramLink(canonicalLink);
+                const statusText =
+                    overrideStatusText ??
+                    (postData.error ? postData.error : null);
+                const variant =
+                    overrideStatusText !== null ? statusVariant : "error";
+                setStatusMessage(statusText, variant);
                 if (!postData.success || !postData.data) {
-                    errorMessage.textContent = "An unexpected error occurred.";
-                    errorMessage.style.display = "block";
                     document.getElementById("postBody").innerHTML = "";
-                    updatePostMeta(normalizedLink ?? lastCanonicalLink, null);
+                    updatePostMeta(canonicalLink, null);
+                    if (parsed) {
+                        updatePostFooter(parsed.channel, parsed.postId);
+                    }
                     return;
                 }
                 const { title, content } = postData.data;
                 document.getElementById("postBody").innerHTML =
                     `<h2>${title}</h2>${content}`;
-                updatePostMeta(
-                    normalizedLink ?? lastCanonicalLink,
-                    postData.data,
-                );
+                updatePostMeta(canonicalLink, postData.data);
+                if (parsed) {
+                    updatePostFooter(parsed.channel, parsed.postId);
+                }
             }
 
             async function loadTelegramPost(
@@ -236,18 +314,16 @@
             ) {
                 const linkInput = document.getElementById("telegramLink");
                 const loadButton = document.getElementById("loadButton");
-                const errorMessage = document.getElementById("errorMessage");
                 const rawLink = (linkOverride ?? linkInput.value).trim();
                 if (!rawLink) {
-                    errorMessage.textContent = "Please enter a Telegram link";
-                    errorMessage.style.display = "block";
+                    setStatusMessage("Please enter a Telegram link");
                     return;
                 }
                 const normalized = normalizeTelegramLink(rawLink);
                 if (!normalized) {
-                    errorMessage.textContent =
-                        "Invalid Telegram link. Use format: https://t.me/username/post_id";
-                    errorMessage.style.display = "block";
+                    setStatusMessage(
+                        "Invalid Telegram link. Use format: https://t.me/username/post_id",
+                    );
                     return;
                 }
                 const parsed = parseTelegramLink(normalized);
@@ -256,15 +332,54 @@
                 if (linkOverride) {
                     linkInput.value = parsed?.cleanLink ?? linkOverride;
                 }
-                if (options.updateHistory) {
-                    updateHistory(canonicalLink, options.replaceHistory);
+                if (options.updateHistory && parsed) {
+                    updateHistory(
+                        parsed.channel,
+                        parsed.postId,
+                        options.replaceHistory,
+                    );
                 }
                 document.getElementById("postBody").innerHTML =
                     "<p>Loading from Telegram...</p>";
                 updatePostMeta(canonicalLink, null);
-                errorMessage.style.display = "none";
+                setStatusMessage();
                 loadButton.disabled = true;
                 const result = await fetchTelegramPost(normalized);
+                if (parsed && !result.success) {
+                    const cached = readPostCache(parsed.channel, parsed.postId);
+                    if (cached) {
+                        persistPostCache(
+                            parsed.channel,
+                            parsed.postId,
+                            cached.data,
+                            {
+                                cachedAt: cached.cachedAt,
+                            },
+                        );
+                        const cachedAt =
+                            cached.cachedAt ?? cached.lastOpened ?? Date.now();
+                        const formattedCached = new Date(
+                            cachedAt,
+                        ).toLocaleString();
+                        renderPostContent(
+                            { success: true, data: cached.data },
+                            canonicalLink,
+                            {
+                                overrideStatusText: `Unable to fetch latest version; showing saved copy from ${formattedCached}.`,
+                                statusVariant: "info",
+                            },
+                        );
+                        loadButton.disabled = false;
+                        return;
+                    }
+                }
+                if (parsed && result.success) {
+                    persistPostCache(
+                        parsed.channel,
+                        parsed.postId,
+                        result.data,
+                    );
+                }
                 renderPostContent(result, canonicalLink);
                 loadButton.disabled = false;
             }
@@ -279,10 +394,12 @@
                 document.getElementById("postBody").innerHTML =
                     `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
                 updatePostMeta(null, null);
-                document.getElementById("errorMessage").style.display = "none";
+                setStatusMessage();
+                updatePostFooter(null, null);
                 document.getElementById("telegramLink").value = "";
+                lastCanonicalLink = null;
                 if (pushHistory || replaceHistory) {
-                    updateHistory(null, replaceHistory);
+                    updateHistory(null, null, replaceHistory);
                 }
             }
 
@@ -302,15 +419,26 @@
                     document.getElementById("postBody").innerHTML =
                         `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
                     updatePostMeta(null, null);
-                    document.getElementById("errorMessage").style.display =
-                        "none";
+                    setStatusMessage();
+                    updatePostFooter(null, null);
                     document.getElementById("telegramLink").value = "";
+                    lastCanonicalLink = null;
                 }
             }
 
             window.addEventListener("DOMContentLoaded", () => {
                 const urlParams = new URLSearchParams(window.location.search);
-                const initialLink = urlParams.get("link");
+                let initialLink = null;
+                const paramChannel = urlParams.get("channel");
+                const paramPost = urlParams.get("post");
+                if (paramChannel && paramPost) {
+                    initialLink = `https://t.me/${paramChannel}/${paramPost}`;
+                } else {
+                    const legacyLink = urlParams.get("link");
+                    if (legacyLink) {
+                        initialLink = legacyLink;
+                    }
+                }
                 if (initialLink) {
                     showReader(initialLink, {
                         pushHistory: false,
@@ -327,7 +455,7 @@
                     showReader(link);
                 };
                 document.getElementById("backToHomeBtn").onclick = () => {
-                    if (window.history.state?.link) {
+                    if (window.history.state?.channel) {
                         window.history.back();
                     } else {
                         showHero({
@@ -348,12 +476,26 @@
                 };
                 setNavigationButtonsState();
                 window.addEventListener("popstate", (event) => {
-                    const link = event.state?.link ?? null;
-                    if (link) {
-                        showReader(link, { pushHistory: false });
-                    } else {
-                        showHero({ pushHistory: false });
+                    const channel = event.state?.channel;
+                    const postId = event.state?.postId;
+                    if (channel && postId) {
+                        showReader(`https://t.me/${channel}/${postId}`, {
+                            pushHistory: false,
+                            replaceHistory: false,
+                        });
+                        return;
                     }
+                    const params = new URLSearchParams(window.location.search);
+                    const paramChannel = params.get("channel");
+                    const paramPost = params.get("post");
+                    if (paramChannel && paramPost) {
+                        showReader(
+                            `https://t.me/${paramChannel}/${paramPost}`,
+                            { pushHistory: false, replaceHistory: false },
+                        );
+                        return;
+                    }
+                    showHero({ pushHistory: false, replaceHistory: false });
                 });
             });
         </script>
@@ -405,6 +547,7 @@
                         the content.
                     </p>
                 </div>
+                <div id="postFooter" class="post-footer"></div>
             </div>
             <div class="post-controls">
                 <button id="firstPostBtn" class="nav-button">First post</button>

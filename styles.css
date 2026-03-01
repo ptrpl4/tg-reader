@@ -228,7 +228,19 @@ footer {
     content: "";
     margin-top: 0.5rem;
 }
+.post-footer {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #555;
+}
 .error-message {
     color: #dc3545;
     margin-top: 1rem;
+}
+.error-message.info {
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    padding: 0.75rem;
+    border-radius: 5px;
+    color: #856404;
 }
