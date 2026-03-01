@@ -44,6 +44,8 @@
 - [x] Functional client-side scraping of public Telegram posts.
 - [x] Support for text formatting, links, and images from posts.
 - [x] Loading states and error handling for fetch operations.
+- [x] Service worker caching for all assets (reader.html, styles.css).
+- [x] Telegram link validation and normalization (t.me/user/id and tg:// formats).
 
 ## Development Notes
 - Prioritize core functionality first.

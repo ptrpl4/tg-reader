@@ -71,14 +71,38 @@
 
         <script>
             /**
+             * Validates and normalizes Telegram links to embed format
+             */
+            function normalizeTelegramLink(link) {
+                link = link.trim();
+
+                // Match t.me/username/post_id or tg://resolve?domain=username&post=id
+                const tmatch = link.match(
+                    /(?:https?:\/\/)?t\.me\/([a-zA-Z0-9_]+)\/(\d+)/,
+                );
+                const tgmatch = link.match(
+                    /tg:\/\/resolve\?domain=([a-zA-Z0-9_]+).*post=(\d+)/,
+                );
+
+                if (tmatch) {
+                    return `https://t.me/${tmatch[1]}/${tmatch[2]}?embed=1`;
+                }
+                if (tgmatch) {
+                    return `https://t.me/${tgmatch[1]}/${tgmatch[2]}?embed=1`;
+                }
+                return null;
+            }
+
+            /**
              * Fetches Telegram post content using AllOrigins CORS proxy
              * and parses the embedded widget HTML.
              */
             async function fetchTelegramPost(link) {
-                // Ensure we use the embed version for easier parsing
-                let embedUrl = link;
-                if (!embedUrl.includes("?embed=1")) {
-                    embedUrl = embedUrl.split("?")[0] + "?embed=1";
+                const embedUrl = normalizeTelegramLink(link);
+                if (!embedUrl) {
+                    return {
+                        error: "Invalid Telegram link. Use format: https://t.me/username/post_id",
+                    };
                 }
 
                 // Using AllOrigins as a CORS proxy to fetch the HTML
@@ -177,14 +201,28 @@
                 const linkInput = document.getElementById("telegramLink");
                 const loadButton = document.getElementById("loadButton");
                 const telegramLink = linkInput.value.trim();
+                const errorMessage = document.getElementById("errorMessage");
 
-                if (!telegramLink) return;
+                if (!telegramLink) {
+                    errorMessage.textContent = "Please enter a Telegram link";
+                    errorMessage.style.display = "block";
+                    return;
+                }
+
+                const normalized = normalizeTelegramLink(telegramLink);
+                if (!normalized) {
+                    errorMessage.textContent =
+                        "Invalid Telegram link. Use format: https://t.me/username/post_id";
+                    errorMessage.style.display = "block";
+                    return;
+                }
 
                 document.getElementById("postDisplay").innerHTML =
                     "<p>Loading from Telegram...</p>";
+                errorMessage.style.display = "none";
                 loadButton.disabled = true;
 
-                const result = await fetchTelegramPost(telegramLink);
+                const result = await fetchTelegramPost(normalized);
                 renderPostContent(result);
 
                 loadButton.disabled = false;
