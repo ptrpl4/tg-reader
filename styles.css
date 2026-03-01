@@ -1,18 +1,36 @@
-body {
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-        sans-serif;
-    color: #333;
-    margin: 0;
-    padding: 0;
-    background: #f0f2f5;
-    line-height: 1.5;
+:root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --border: rgba(15, 23, 42, 0.1);
+    --text: #1f2532;
+    --muted: #5b6172;
+    --primary: #4a7dd6;
+    --primary-dark: #3b6ac0;
+    --accent: #1ca48a;
 }
 
 *,
 *::before,
 *::after {
     box-sizing: border-box;
+}
+
+body {
+    font-family:
+        "Inter",
+        "Space Grotesk",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    line-height: 1.6;
 }
 
 /* Header block centered, text left-aligned */
@@ -31,19 +49,47 @@ body {
     text-align: left;
     margin: 0;
 }
-.header-container h1,
-.header-container p {
-    text-align: left;
-    margin: 0;
-}
+
 header {
-    background: #007bff;
+    background: var(--primary);
     color: white;
     padding: 1.5rem 0;
     text-align: center;
 }
+.header-shell {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.header-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+    flex: 1;
+}
+.theme-toggle {
+    padding: 0.6rem 1.1rem;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(15, 23, 42, 0.85);
+    color: white;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+.theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+.header-link:hover .header-container {
+    transform: translateY(0);
+}
 .hero {
-    padding: 2rem 0 1rem;
+    padding: 2.5rem 0 1.5rem;
     text-align: center;
 }
 .hero .link-input-group {
@@ -60,28 +106,34 @@ header {
     font-size: 2.5rem;
 }
 .hero p {
-    font-size: 1.2rem;
-    color: #555;
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 48ch;
+    margin: 0 auto;
 }
 .cta-button {
-    padding: 0.8rem 1.5rem;
+    padding: 0.9rem 1.6rem;
     font-size: 1rem;
-    background: #28a745;
+    background: var(--accent);
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition:
+        transform 0.2s ease,
+        background 0.3s;
+    box-shadow: 0 6px 12px rgba(26, 164, 138, 0.25);
 }
 .cta-button:hover {
-    background: #218838;
+    background: #1c9582;
+    transform: translateY(-1px);
 }
 
 footer {
     text-align: center;
     padding: 1.5rem;
     font-size: 0.9rem;
-    color: #777;
+    color: var(--muted);
     margin-top: 2rem;
 }
 
@@ -89,11 +141,12 @@ footer {
 .reader-container {
     margin: 2rem auto;
     padding: 1.5rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
     width: 100%;
     box-sizing: border-box;
+    border: 1px solid var(--border);
 }
 .link-input-group {
     display: flex;
@@ -102,28 +155,61 @@ footer {
 }
 .link-input-group input {
     flex: 1 1 0;
-    padding: 0.8rem;
-    border: 1px solid #ced4da;
-    border-radius: 5px;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
     font-size: 1rem;
     min-width: 0;
+    background: #f7f8fb;
+    color: var(--text);
 }
 .link-input-group button {
-    padding: 0.8rem 1.5rem;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background 0.3s;
     flex: 0 0 auto;
 }
-.link-input-group button:hover {
-    background: #218838;
+.primary-button {
+    padding: 0.85rem 1.4rem;
+    background: var(--primary);
+    color: white;
+    border: 1px solid var(--primary-dark);
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+        background 0.3s,
+        transform 0.2s ease;
+}
+.primary-button:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+.primary-button:disabled {
+    background: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.4);
+    cursor: not-allowed;
+}
+.secondary-button {
+    padding: 0.85rem 1.4rem;
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 999px;
+    color: var(--text);
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+}
+.secondary-button:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
+}
+.secondary-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 .post-content {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border);
     padding-top: 1.5rem;
+    color: var(--text);
 }
 .post-meta {
     display: flex;
@@ -131,11 +217,11 @@ footer {
     gap: 0.75rem;
     margin-bottom: 1rem;
     font-size: 0.9rem;
-    color: #555;
+    color: var(--muted);
 }
 .post-meta span {
-    background: rgba(0, 123, 255, 0.1);
-    color: #0056b3;
+    background: rgba(74, 125, 214, 0.1);
+    color: var(--primary);
     padding: 0.35rem 0.6rem;
     border-radius: 999px;
     font-weight: 600;
@@ -157,27 +243,20 @@ footer {
 }
 .nav-button {
     padding: 0.6rem 1rem;
-    border: 1px solid #007bff;
-    background: white;
-    color: #007bff;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
     transition:
         background 0.2s,
         color 0.2s;
 }
-.nav-button:hover {
-    background: #007bff;
-    color: #fff;
+.nav-button:hover:not(:disabled) {
 }
 .nav-button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #f8f9fa;
-    color: #007bff;
 }
 .post-content h2 {
-    color: #007bff;
+    color: var(--primary);
     margin-top: 0;
 }
 .post-content img {
@@ -204,11 +283,11 @@ footer {
     font-size: 1.1rem;
     white-space: pre-wrap;
     word-break: break-word;
-    color: #222;
+    color: var(--text);
 }
 
 .post-content a {
-    color: #0088cc;
+    color: var(--primary);
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 0.2s;
@@ -231,16 +310,76 @@ footer {
 .post-footer {
     margin-top: 1rem;
     font-size: 0.9rem;
-    color: #555;
+    color: var(--muted);
 }
 .error-message {
     color: #dc3545;
     margin-top: 1rem;
+    font-size: 0.95rem;
 }
 .error-message.info {
-    background: #fff3cd;
-    border: 1px solid #ffeeba;
+    background: #fff8ec;
+    border: 1px solid #ffe2c2;
     padding: 0.75rem;
-    border-radius: 5px;
-    color: #856404;
+    border-radius: 6px;
+    color: #935f00;
+}
+
+:root[data-theme="dark"] {
+    --bg: #0e111a;
+    --surface: #171b26;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #f8fbff;
+    --muted: #c7d2ff;
+    --primary: #7c9df6;
+    --primary-dark: #5e79d8;
+    --accent: #31c8a5;
+}
+
+:root[data-theme="dark"] body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+:root[data-theme="dark"] header {
+    background: var(--primary);
+}
+
+:root[data-theme="dark"] .reader-container {
+    background: #1b202c;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+}
+
+:root[data-theme="dark"] .link-input-group input {
+    background: #10132a;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+
+:root[data-theme="dark"] .link-input-group button {
+    background: var(--primary-dark);
+    border-color: var(--primary);
+}
+
+:root[data-theme="dark"] .post-content {
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .post-meta span {
+    background: rgba(124, 157, 246, 0.16);
+}
+
+:root[data-theme="dark"] footer {
+    color: var(--muted);
+}
+
+:root[data-theme="dark"] .theme-toggle {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-theme="dark"] .secondary-button {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: var(--text);
 }

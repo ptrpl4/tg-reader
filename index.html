@@ -44,9 +44,67 @@
 
             const defaultTelegramLink = "https://t.me/korovany/1494";
             const POST_CACHE_STORAGE_KEY = "tg-reader-post-cache-v1";
+            const THEME_STORAGE_KEY = "tg-reader-theme";
+            const Theme = {
+                LIGHT: "light",
+                DARK: "dark",
+            };
             let currentChannel = null;
             let currentPostId = null;
             let lastCanonicalLink = null;
+
+            function getStoredTheme() {
+                try {
+                    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+                    if (stored === Theme.DARK || stored === Theme.LIGHT) {
+                        return stored;
+                    }
+                } catch (error) {
+                    console.warn("Unable to read theme preference:", error);
+                }
+                return null;
+            }
+
+            function applyTheme(theme, persist = true) {
+                if (!theme) return;
+                document.documentElement.dataset.theme = theme;
+                const toggleBtn = document.getElementById("themeToggle");
+                if (toggleBtn) {
+                    toggleBtn.textContent =
+                        theme === Theme.DARK
+                            ? "Switch to Light"
+                            : "Switch to Dark";
+                    toggleBtn.setAttribute(
+                        "aria-pressed",
+                        String(theme === Theme.DARK),
+                    );
+                }
+                if (persist) {
+                    try {
+                        localStorage.setItem(THEME_STORAGE_KEY, theme);
+                    } catch (error) {
+                        console.warn("Unable to persist theme:", error);
+                    }
+                }
+            }
+
+            function initThemeToggle() {
+                const storedTheme = getStoredTheme();
+                const prefersDark = window.matchMedia(
+                    "(prefers-color-scheme: dark)",
+                ).matches;
+                const initialTheme =
+                    storedTheme ?? (prefersDark ? Theme.DARK : Theme.LIGHT);
+                applyTheme(initialTheme, Boolean(storedTheme));
+                const toggleBtn = document.getElementById("themeToggle");
+                toggleBtn?.addEventListener("click", () => {
+                    const nextTheme =
+                        document.documentElement.dataset.theme === Theme.DARK
+                            ? Theme.LIGHT
+                            : Theme.DARK;
+                    applyTheme(nextTheme, true);
+                });
+            }
 
             function buildCacheKey(channel, postId) {
                 return `${channel}/${postId}`;
@@ -474,6 +532,7 @@
                     if (!currentChannel) return;
                     showReader(`https://t.me/${currentChannel}/1`);
                 };
+                initThemeToggle();
                 setNavigationButtonsState();
                 window.addEventListener("popstate", (event) => {
                     const channel = event.state?.channel;
@@ -502,9 +561,23 @@
     </head>
     <body>
         <header>
-            <div class="header-container page-shell">
-                <h1>tg-Reader</h1>
-                <p>Your standalone web app for reading Telegram posts</p>
+            <div class="header-shell page-shell">
+                <a class="header-link" href="/">
+                    <div class="header-container">
+                        <h1>tg-Reader</h1>
+                        <p>
+                            Your standalone web app for reading Telegram posts
+                        </p>
+                    </div>
+                </a>
+                <button
+                    id="themeToggle"
+                    class="theme-toggle"
+                    type="button"
+                    aria-pressed="false"
+                >
+                    Switch to Dark
+                </button>
             </div>
         </header>
         <section class="hero page-shell">
@@ -531,10 +604,13 @@
                     id="telegramLink"
                     placeholder="e.g., https://t.me/korovany/1494"
                 />
-                <button id="loadButton">Load Post</button>
+                <button id="loadButton" class="primary-button">
+                    Load Post
+                </button>
                 <button
                     id="backToHomeBtn"
-                    style="background: #007bff; color: white"
+                    class="secondary-button"
+                    type="button"
                 >
                     Back
                 </button>
@@ -550,9 +626,15 @@
                 <div id="postFooter" class="post-footer"></div>
             </div>
             <div class="post-controls">
-                <button id="firstPostBtn" class="nav-button">First post</button>
-                <button id="prevPostBtn" class="nav-button">Previous</button>
-                <button id="nextPostBtn" class="nav-button">Next</button>
+                <button id="firstPostBtn" class="nav-button primary-button">
+                    First post
+                </button>
+                <button id="prevPostBtn" class="nav-button primary-button">
+                    Previous
+                </button>
+                <button id="nextPostBtn" class="nav-button primary-button">
+                    Next
+                </button>
             </div>
             <p
                 id="errorMessage"
