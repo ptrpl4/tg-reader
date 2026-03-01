@@ -30,8 +30,6 @@ A frontend-only Progressive Web App (PWA) that allows users to:
    - Link structure: `https://tg-reader.com/share?data=...`
 
 3. 🧠 Smart Content Handling:
-   - Automatic image optimization
-   - Content filtering (NSFW detection)
    - Text-to-speech integration
 
 ## Technical Considerations
