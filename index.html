@@ -45,6 +45,19 @@
             const defaultTelegramLink = "https://t.me/korovany/1494";
             let currentChannel = null;
             let currentPostId = null;
+            let lastCanonicalLink = null;
+
+            function updateHistory(link, replace = false) {
+                const url = link
+                    ? `${window.location.pathname}?link=${encodeURIComponent(link)}`
+                    : window.location.pathname;
+                const state = { link };
+                if (replace) {
+                    window.history.replaceState(state, "", url);
+                } else {
+                    window.history.pushState(state, "", url);
+                }
+            }
 
             function parseTelegramLink(link) {
                 if (!link) return null;
@@ -198,60 +211,93 @@
                     errorMessage.textContent = postData.error;
                     errorMessage.style.display = "block";
                     document.getElementById("postBody").innerHTML = "";
-                    updatePostMeta(null, null);
+                    updatePostMeta(normalizedLink ?? lastCanonicalLink, null);
                     return;
                 }
                 if (!postData.success || !postData.data) {
                     errorMessage.textContent = "An unexpected error occurred.";
                     errorMessage.style.display = "block";
                     document.getElementById("postBody").innerHTML = "";
-                    updatePostMeta(null, null);
+                    updatePostMeta(normalizedLink ?? lastCanonicalLink, null);
                     return;
                 }
                 const { title, content } = postData.data;
                 document.getElementById("postBody").innerHTML =
                     `<h2>${title}</h2>${content}`;
-                updatePostMeta(normalizedLink, postData.data);
+                updatePostMeta(
+                    normalizedLink ?? lastCanonicalLink,
+                    postData.data,
+                );
             }
 
-            async function loadTelegramPost() {
+            async function loadTelegramPost(
+                linkOverride = null,
+                options = { updateHistory: false, replaceHistory: false },
+            ) {
                 const linkInput = document.getElementById("telegramLink");
                 const loadButton = document.getElementById("loadButton");
-                const telegramLink = linkInput.value.trim();
                 const errorMessage = document.getElementById("errorMessage");
-                if (!telegramLink) {
+                const rawLink = (linkOverride ?? linkInput.value).trim();
+                if (!rawLink) {
                     errorMessage.textContent = "Please enter a Telegram link";
                     errorMessage.style.display = "block";
                     return;
                 }
-                const normalized = normalizeTelegramLink(telegramLink);
+                const normalized = normalizeTelegramLink(rawLink);
                 if (!normalized) {
                     errorMessage.textContent =
                         "Invalid Telegram link. Use format: https://t.me/username/post_id";
                     errorMessage.style.display = "block";
                     return;
                 }
+                const parsed = parseTelegramLink(normalized);
+                const canonicalLink = parsed?.cleanLink ?? normalized;
+                lastCanonicalLink = canonicalLink;
+                if (linkOverride) {
+                    linkInput.value = parsed?.cleanLink ?? linkOverride;
+                }
+                if (options.updateHistory) {
+                    updateHistory(canonicalLink, options.replaceHistory);
+                }
                 document.getElementById("postBody").innerHTML =
                     "<p>Loading from Telegram...</p>";
-                updatePostMeta(null, null);
+                updatePostMeta(canonicalLink, null);
                 errorMessage.style.display = "none";
                 loadButton.disabled = true;
                 const result = await fetchTelegramPost(normalized);
-                renderPostContent(result, normalized);
+                renderPostContent(result, canonicalLink);
                 loadButton.disabled = false;
             }
 
-            function showHero() {
+            function showHero({
+                pushHistory = true,
+                replaceHistory = false,
+            } = {}) {
                 document.querySelector(".hero").style.display = "";
                 document.querySelector(".reader-container").style.display =
                     "none";
+                document.getElementById("postBody").innerHTML =
+                    `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
+                updatePostMeta(null, null);
+                document.getElementById("errorMessage").style.display = "none";
+                document.getElementById("telegramLink").value = "";
+                if (pushHistory || replaceHistory) {
+                    updateHistory(null, replaceHistory);
+                }
             }
-            function showReader(link) {
+
+            function showReader(
+                link,
+                { pushHistory = true, replaceHistory = false } = {},
+            ) {
                 document.querySelector(".hero").style.display = "none";
                 document.querySelector(".reader-container").style.display = "";
                 if (link) {
                     document.getElementById("telegramLink").value = link;
-                    loadTelegramPost();
+                    loadTelegramPost(link, {
+                        updateHistory: pushHistory || replaceHistory,
+                        replaceHistory,
+                    });
                 } else {
                     document.getElementById("postBody").innerHTML =
                         `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
@@ -266,9 +312,12 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const initialLink = urlParams.get("link");
                 if (initialLink) {
-                    showReader(initialLink);
+                    showReader(initialLink, {
+                        pushHistory: false,
+                        replaceHistory: true,
+                    });
                 } else {
-                    showHero();
+                    showHero({ pushHistory: false, replaceHistory: true });
                 }
                 document.getElementById("goToReaderBtn").onclick = () => {
                     const rawLink = document
@@ -278,8 +327,17 @@
                     showReader(link);
                 };
                 document.getElementById("backToHomeBtn").onclick = () => {
-                    showHero();
+                    if (window.history.state?.link) {
+                        window.history.back();
+                    } else {
+                        showHero({
+                            pushHistory: false,
+                            replaceHistory: true,
+                        });
+                    }
                 };
+                document.getElementById("loadButton").onclick = () =>
+                    loadTelegramPost(null, { updateHistory: true });
                 document.getElementById("nextPostBtn").onclick = () =>
                     goToAdjacentPost(1);
                 document.getElementById("prevPostBtn").onclick = () =>
@@ -289,6 +347,14 @@
                     showReader(`https://t.me/${currentChannel}/1`);
                 };
                 setNavigationButtonsState();
+                window.addEventListener("popstate", (event) => {
+                    const link = event.state?.link ?? null;
+                    if (link) {
+                        showReader(link, { pushHistory: false });
+                    } else {
+                        showHero({ pushHistory: false });
+                    }
+                });
             });
         </script>
     </head>
@@ -323,9 +389,7 @@
                     id="telegramLink"
                     placeholder="e.g., https://t.me/korovany/1494"
                 />
-                <button id="loadButton" onclick="loadTelegramPost()">
-                    Load Post
-                </button>
+                <button id="loadButton">Load Post</button>
                 <button
                     id="backToHomeBtn"
                     style="background: #007bff; color: white"
