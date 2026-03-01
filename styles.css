@@ -219,6 +219,27 @@ footer {
     font-size: 0.9rem;
     color: var(--muted);
 }
+
+.reply-banner {
+    border-left: 3px solid var(--primary);
+    background: rgba(74, 125, 214, 0.08);
+    padding: 0.8rem 1rem;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 1rem;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+.reply-banner__meta {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.reply-banner__text {
+    font-weight: 500;
+}
 .post-meta span {
     background: rgba(74, 125, 214, 0.1);
     color: var(--primary);
@@ -376,6 +397,11 @@ footer {
 
 :root[data-theme="dark"] .theme-toggle {
     background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+:root[data-theme="dark"] .reply-banner {
+    background: rgba(124, 157, 246, 0.12);
     border-color: rgba(255, 255, 255, 0.35);
 }
 

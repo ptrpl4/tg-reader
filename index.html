@@ -280,9 +280,9 @@
                 try {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlString, "text/html");
-                    const messageText = doc.querySelector(
-                        ".tgme_widget_message_text",
-                    );
+                    const messageText = Array.from(
+                        doc.querySelectorAll(".tgme_widget_message_text"),
+                    ).find((el) => !el.closest(".tgme_widget_message_reply"));
                     const authorName = doc.querySelector(
                         ".tgme_widget_message_author .tgme_widget_message_owner_name",
                     );
@@ -314,6 +314,40 @@
                     if (messageText) {
                         result.content += `<div class="text-block">${messageText.innerHTML}</div>`;
                     }
+                    const replyBlock = doc.querySelector(
+                        ".tgme_widget_message_reply",
+                    );
+                    if (replyBlock) {
+                        const replyTextEl = replyBlock.querySelector(
+                            ".js-message_reply_text, .tgme_widget_message_text",
+                        );
+                        const replyLinkEl =
+                            replyBlock.querySelector("a[href*='t.me/']");
+                        const replyAuthor =
+                            replyBlock
+                                .querySelector(
+                                    ".tgme_widget_message_owner_name, .tgme_widget_message_author",
+                                )
+                                ?.textContent.trim() ?? null;
+                        const replyLink = replyLinkEl
+                            ? replyLinkEl.href.split("?")[0]
+                            : null;
+                        const parsedReplyLink = replyLink
+                            ? parseTelegramLink(replyLink)
+                            : null;
+                        if (replyTextEl) {
+                            const replyText = replyTextEl.innerHTML.trim();
+                            if (replyText) {
+                                result.reply = {
+                                    text: replyText,
+                                    author: replyAuthor,
+                                    link: replyLink,
+                                    channel: parsedReplyLink?.channel ?? null,
+                                    postId: parsedReplyLink?.postId ?? null,
+                                };
+                            }
+                        }
+                    }
                     if (photo) {
                         const style = photo.getAttribute("style");
                         const urlMatch = style
@@ -334,6 +368,30 @@
                     console.error("Parse error:", parseError);
                     return { error: "Failed to parse post content." };
                 }
+            }
+
+            function buildReplySection(reply) {
+                if (!reply?.text) {
+                    return "";
+                }
+                const metaParts = [];
+                if (reply.author) metaParts.push(reply.author);
+                else if (reply.channel) metaParts.push(reply.channel);
+                else metaParts.push("original message");
+                if (reply.postId) metaParts.push(`#${reply.postId}`);
+                const metaText = metaParts.join(" ");
+                const linkHtml = reply.link
+                    ? `<a href="${reply.link}" target="_blank" rel="noreferrer">View original</a>`
+                    : "";
+                return `
+                    <div class="reply-banner">
+                        <div class="reply-banner__meta">
+                            Replying to <strong>${metaText}</strong>
+                            ${linkHtml ? `• ${linkHtml}` : ""}
+                        </div>
+                        <div class="reply-banner__text">${reply.text}</div>
+                    </div>
+                `;
             }
 
             function renderPostContent(
@@ -358,8 +416,12 @@
                     return;
                 }
                 const { title, content } = postData.data;
-                document.getElementById("postBody").innerHTML =
-                    `<h2>${title}</h2>${content}`;
+                const replySection = buildReplySection(postData.data.reply);
+                document.getElementById("postBody").innerHTML = `
+                    <h2>${title}</h2>
+                    ${replySection}
+                    ${content}
+                `;
                 updatePostMeta(canonicalLink, postData.data);
                 if (parsed) {
                     updatePostFooter(parsed.channel, parsed.postId);
@@ -532,6 +594,12 @@
                     if (!currentChannel) return;
                     showReader(`https://t.me/${currentChannel}/1`);
                 };
+                document
+                    .getElementById("headerLink")
+                    .addEventListener("click", (event) => {
+                        event.preventDefault();
+                        showHero({ pushHistory: true, replaceHistory: true });
+                    });
                 initThemeToggle();
                 setNavigationButtonsState();
                 window.addEventListener("popstate", (event) => {
@@ -562,7 +630,7 @@
     <body>
         <header>
             <div class="header-shell page-shell">
-                <a class="header-link" href="/">
+                <a class="header-link" id="headerLink" href="#">
                     <div class="header-container">
                         <h1>tg-Reader</h1>
                         <p>
