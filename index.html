@@ -1,0 +1,74 @@
+<!doctype html>
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Telegram Reader PWA</title>
+        <link rel="manifest" href="manifest.json" />
+        <link rel="stylesheet" href="styles.css" />
+        <script>
+            if ("serviceWorker" in navigator) {
+                window.addEventListener("load", () => {
+                    navigator.serviceWorker
+                        .register("service-worker.js")
+                        .then((registration) =>
+                            console.log(
+                                "Service Worker registered:",
+                                registration,
+                            ),
+                        )
+                        .catch((error) =>
+                            console.error(
+                                "Service Worker registration failed:",
+                                error,
+                            ),
+                        );
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <header>
+            <h1>Telegram Reader PWA</h1>
+            <p>Your standalone web app for reading Telegram posts</p>
+        </header>
+        <section class="hero">
+            <h1>Read Telegram Posts in Your Browser</h1>
+            <p>
+                Access Telegram posts without needing a Telegram account. Our
+                PWA will display text, images, and multimedia content in a
+                clean, customizable reader interface.
+            </p>
+            <button
+                class="cta-button"
+                onclick="window.location.href = '/reader'"
+            >
+                Try Reading a Post
+            </button>
+        </section>
+        <div class="example-link">
+            <strong>Test with this link:</strong><br />
+            <code>https://t.me/korovany/1494</code><br />
+            <small>(Click the "Try Reading a Post" button above to test)</small>
+        </div>
+        <footer>
+            <p>
+                Powered by pure JavaScript and modern web technologies • Works
+                offline • No server required
+            </p>
+            <p>
+                <a href="/reader" style="color: #007bff; text-decoration: none"
+                    >Read a post</a
+                >
+                •
+                <a
+                    href="https://t.me/korovany/1494"
+                    style="color: #007bff; text-decoration: none"
+                    target="_blank"
+                    >Test link</a
+                >
+            </p>
+        </footer>
+    </body>
+</html>
