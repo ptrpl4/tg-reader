@@ -42,6 +42,74 @@
                 return null;
             }
 
+            const defaultTelegramLink = "https://t.me/korovany/1494";
+            let currentChannel = null;
+            let currentPostId = null;
+
+            function parseTelegramLink(link) {
+                if (!link) return null;
+                const clean = link.split("?")[0];
+                const match = clean.match(/t\.me\/([a-zA-Z0-9_]+)\/(\d+)/);
+                if (!match) {
+                    return null;
+                }
+                return {
+                    channel: match[1],
+                    postId: Number(match[2]),
+                    cleanLink: clean,
+                };
+            }
+
+            function updatePostMeta(normalizedLink, data) {
+                const metaEl = document.getElementById("postMeta");
+                if (!normalizedLink) {
+                    metaEl.innerHTML = "";
+                    currentChannel = null;
+                    currentPostId = null;
+                    setNavigationButtonsState();
+                    return;
+                }
+                const parsed = parseTelegramLink(normalizedLink);
+                if (!parsed) {
+                    metaEl.innerHTML = "";
+                    setNavigationButtonsState();
+                    return;
+                }
+                currentChannel = parsed.channel;
+                currentPostId = parsed.postId;
+                const pieces = [];
+                pieces.push(`<span>${parsed.channel}</span>`);
+                pieces.push(`<span>Post #${parsed.postId}</span>`);
+                if (data?.publishedAt) {
+                    pieces.push(`<span>${data.publishedAt}</span>`);
+                }
+                pieces.push(
+                    `<span><a href="${parsed.cleanLink}" target="_blank" rel="noreferrer">Open on Telegram</a></span>`,
+                );
+                metaEl.innerHTML = pieces.join("");
+                setNavigationButtonsState();
+            }
+
+            function setNavigationButtonsState() {
+                const firstBtn = document.getElementById("firstPostBtn");
+                const prevBtn = document.getElementById("prevPostBtn");
+                const nextBtn = document.getElementById("nextPostBtn");
+                if (!firstBtn || !prevBtn || !nextBtn) {
+                    return;
+                }
+                const hasChannel = Boolean(currentChannel && currentPostId);
+                firstBtn.disabled = !hasChannel || currentPostId <= 1;
+                prevBtn.disabled = !hasChannel || currentPostId <= 1;
+                nextBtn.disabled = !hasChannel;
+            }
+
+            function goToAdjacentPost(delta) {
+                if (!currentChannel || !currentPostId) return;
+                const targetId = currentPostId + delta;
+                if (targetId < 1) return;
+                showReader(`https://t.me/${currentChannel}/${targetId}`);
+            }
+
             async function fetchTelegramPost(link) {
                 const embedUrl = normalizeTelegramLink(link);
                 if (!embedUrl) {
@@ -90,6 +158,14 @@
                             : "Telegram Post",
                         content: "",
                     };
+                    const dateNode = doc.querySelector(
+                        ".tgme_widget_message_date time",
+                    );
+                    if (dateNode && dateNode.getAttribute("datetime")) {
+                        result.publishedAt = new Date(
+                            dateNode.getAttribute("datetime"),
+                        ).toLocaleString();
+                    }
                     if (messageText) {
                         result.content += `<div class="text-block">${messageText.innerHTML}</div>`;
                     }
@@ -115,24 +191,27 @@
                 }
             }
 
-            function renderPostContent(postData) {
-                const postDisplay = document.getElementById("postDisplay");
+            function renderPostContent(postData, normalizedLink) {
                 const errorMessage = document.getElementById("errorMessage");
                 errorMessage.style.display = "none";
                 if (postData.error) {
                     errorMessage.textContent = postData.error;
                     errorMessage.style.display = "block";
-                    postDisplay.innerHTML = "";
+                    document.getElementById("postBody").innerHTML = "";
+                    updatePostMeta(null, null);
                     return;
                 }
                 if (!postData.success || !postData.data) {
                     errorMessage.textContent = "An unexpected error occurred.";
                     errorMessage.style.display = "block";
-                    postDisplay.innerHTML = "";
+                    document.getElementById("postBody").innerHTML = "";
+                    updatePostMeta(null, null);
                     return;
                 }
                 const { title, content } = postData.data;
-                postDisplay.innerHTML = `<h2>${title}</h2>${content}`;
+                document.getElementById("postBody").innerHTML =
+                    `<h2>${title}</h2>${content}`;
+                updatePostMeta(normalizedLink, postData.data);
             }
 
             async function loadTelegramPost() {
@@ -152,12 +231,13 @@
                     errorMessage.style.display = "block";
                     return;
                 }
-                document.getElementById("postDisplay").innerHTML =
+                document.getElementById("postBody").innerHTML =
                     "<p>Loading from Telegram...</p>";
+                updatePostMeta(null, null);
                 errorMessage.style.display = "none";
                 loadButton.disabled = true;
                 const result = await fetchTelegramPost(normalized);
-                renderPostContent(result);
+                renderPostContent(result, normalized);
                 loadButton.disabled = false;
             }
 
@@ -173,8 +253,9 @@
                     document.getElementById("telegramLink").value = link;
                     loadTelegramPost();
                 } else {
-                    document.getElementById("postDisplay").innerHTML =
+                    document.getElementById("postBody").innerHTML =
                         `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
+                    updatePostMeta(null, null);
                     document.getElementById("errorMessage").style.display =
                         "none";
                     document.getElementById("telegramLink").value = "";
@@ -182,7 +263,6 @@
             }
 
             window.addEventListener("DOMContentLoaded", () => {
-                const defaultTelegramLink = "https://t.me/korovany/1494";
                 const urlParams = new URLSearchParams(window.location.search);
                 const initialLink = urlParams.get("link");
                 if (initialLink) {
@@ -200,6 +280,15 @@
                 document.getElementById("backToHomeBtn").onclick = () => {
                     showHero();
                 };
+                document.getElementById("nextPostBtn").onclick = () =>
+                    goToAdjacentPost(1);
+                document.getElementById("prevPostBtn").onclick = () =>
+                    goToAdjacentPost(-1);
+                document.getElementById("firstPostBtn").onclick = () => {
+                    if (!currentChannel) return;
+                    showReader(`https://t.me/${currentChannel}/1`);
+                };
+                setNavigationButtonsState();
             });
         </script>
     </head>
@@ -245,10 +334,18 @@
                 </button>
             </div>
             <div id="postDisplay" class="post-content">
-                <p>
-                    Enter a Telegram link above and click "Load Post" to see the
-                    content.
-                </p>
+                <div id="postMeta" class="post-meta"></div>
+                <div id="postBody">
+                    <p>
+                        Enter a Telegram link above and click "Load Post" to see
+                        the content.
+                    </p>
+                </div>
+            </div>
+            <div class="post-controls">
+                <button id="firstPostBtn" class="nav-button">First post</button>
+                <button id="prevPostBtn" class="nav-button">Previous</button>
+                <button id="nextPostBtn" class="nav-button">Next</button>
             </div>
             <p
                 id="errorMessage"
