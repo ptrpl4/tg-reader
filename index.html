@@ -26,6 +26,15 @@
                         );
                 });
             }
+
+            function goToReader() {
+                const link = document.getElementById("homeLink").value.trim();
+                if (!link) {
+                    alert("Please enter a Telegram link");
+                    return;
+                }
+                window.location.href = `reader.html?link=${encodeURIComponent(link)}`;
+            }
         </script>
     </head>
     <body>
@@ -40,17 +49,21 @@
                 PWA will display text, images, and multimedia content in a
                 clean, customizable reader interface.
             </p>
-            <button
-                class="cta-button"
-                onclick="window.location.href = '/reader'"
-            >
-                Try Reading a Post
-            </button>
+            <div class="link-input-group">
+                <input
+                    type="text"
+                    id="homeLink"
+                    placeholder="e.g., https://t.me/korovany/1494"
+                />
+                <button class="cta-button" onclick="goToReader()">
+                    Read Post
+                </button>
+            </div>
         </section>
         <div class="example-link">
             <strong>Test with this link:</strong><br />
             <code>https://t.me/korovany/1494</code><br />
-            <small>(Click the "Try Reading a Post" button above to test)</small>
+            <small>(Paste it above and click "Read Post")</small>
         </div>
         <footer>
             <p>
@@ -58,7 +71,9 @@
                 offline • No server required
             </p>
             <p>
-                <a href="/reader" style="color: #007bff; text-decoration: none"
+                <a
+                    href="reader.html"
+                    style="color: #007bff; text-decoration: none"
                     >Read a post</a
                 >
                 •

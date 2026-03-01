@@ -20,6 +20,13 @@ header {
     max-width: 800px;
     margin: 0 auto;
 }
+.hero .link-input-group {
+    margin-top: 2rem;
+    justify-content: center;
+}
+.hero .link-input-group input {
+    max-width: 400px;
+}
 .hero h1 {
     margin: 0 0 1rem 0;
     font-size: 2.5rem;
@@ -29,10 +36,9 @@ header {
     color: #555;
 }
 .cta-button {
-    margin-top: 2rem;
-    padding: 1rem 2rem;
-    font-size: 1.2rem;
-    background: #007bff;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    background: #28a745;
     color: white;
     border: none;
     border-radius: 5px;
@@ -40,7 +46,7 @@ header {
     transition: background 0.3s;
 }
 .cta-button:hover {
-    background: #0056b3;
+    background: #218838;
 }
 .example-link {
     margin-top: 2rem;
