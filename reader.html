@@ -107,17 +107,26 @@
                     };
                 }
 
-                // Using AllOrigins as a CORS proxy to fetch the HTML
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(embedUrl)}`;
+                // Use CodeTabs proxy as an alternative CORS proxy (returns raw proxied content)
+                // This proxy often works better for local file:// testing. If it fails, consider hosting locally.
+                const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(embedUrl)}`;
 
                 try {
                     const response = await fetch(proxyUrl);
                     if (!response.ok) throw new Error("Proxy request failed");
 
-                    const data = await response.json();
-                    const htmlString = data.contents;
+                    const htmlString = await response.text();
+                    return parsePostContent(htmlString);
+                } catch (error) {
+                    console.error("codetabs fetch failed:", error);
+                    return {
+                        error: "Unable to fetch post. This may be due to network restrictions or CORS limitations when running locally (file://). Try serving the app via a local server (e.g., 'python -m http.server 8000') or use a different public proxy.",
+                    };
+                }
+            }
 
-                    // Parse the HTML string into a DOM object
+            function parsePostContent(htmlString) {
+                try {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(htmlString, "text/html");
 
@@ -167,10 +176,10 @@
                     }
 
                     return { success: true, data: result };
-                } catch (error) {
-                    console.error("Fetch error:", error);
+                } catch (parseError) {
+                    console.error("Parse error:", parseError);
                     return {
-                        error: "Failed to fetch content. Please check your connection or try again later.",
+                        error: "Failed to parse post content.",
                     };
                 }
             }
