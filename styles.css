@@ -8,24 +8,52 @@ body {
     background: #f0f2f5;
     line-height: 1.5;
 }
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Header block centered, text left-aligned */
+.page-shell {
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+.header-container {
+    text-align: left;
+    padding: 1.5rem 0 0;
+}
+.header-container h1,
+.header-container p {
+    text-align: left;
+    margin: 0;
+}
+.header-container h1,
+.header-container p {
+    text-align: left;
+    margin: 0;
+}
 header {
     background: #007bff;
     color: white;
-    padding: 1.5rem;
+    padding: 1.5rem 0;
     text-align: center;
 }
 .hero {
-    padding: 2rem;
+    padding: 2rem 0 1rem;
     text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
 }
 .hero .link-input-group {
     margin-top: 2rem;
     justify-content: center;
+    flex-wrap: wrap;
 }
 .hero .link-input-group input {
-    max-width: 400px;
+    flex: 1 1 100%;
+    min-width: 0;
 }
 .hero h1 {
     margin: 0 0 1rem 0;
@@ -48,16 +76,7 @@ header {
 .cta-button:hover {
     background: #218838;
 }
-.example-link {
-    margin-top: 2rem;
-    padding: 1rem;
-    background: #e9ecef;
-    border: 1px solid #ced4da;
-    border-radius: 5px;
-    font-family: monospace;
-    font-size: 0.9rem;
-    color: #212529;
-}
+
 footer {
     text-align: center;
     padding: 1.5rem;
@@ -68,12 +87,13 @@ footer {
 
 /* Reader specific styles */
 .reader-container {
-    max-width: 800px;
-    margin: 2rem auto; /* This will center the reader container within the body's max-width if body is not already centered */
+    margin: 2rem auto;
     padding: 1.5rem;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    box-sizing: border-box;
 }
 .link-input-group {
     display: flex;
@@ -81,11 +101,12 @@ footer {
     gap: 10px;
 }
 .link-input-group input {
-    flex-grow: 1;
+    flex: 1 1 0;
     padding: 0.8rem;
     border: 1px solid #ced4da;
     border-radius: 5px;
     font-size: 1rem;
+    min-width: 0;
 }
 .link-input-group button {
     padding: 0.8rem 1.5rem;
@@ -95,6 +116,7 @@ footer {
     border-radius: 5px;
     cursor: pointer;
     transition: background 0.3s;
+    flex: 0 0 auto;
 }
 .link-input-group button:hover {
     background: #218838;

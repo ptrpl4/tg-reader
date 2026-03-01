@@ -1,5 +1,4 @@
 <!doctype html>
-
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
@@ -27,22 +26,191 @@
                 });
             }
 
-            function goToReader() {
-                const link = document.getElementById("homeLink").value.trim();
-                if (!link) {
-                    alert("Please enter a Telegram link");
+            // Reader logic from reader.html
+            function normalizeTelegramLink(link) {
+                link = link.trim();
+                const tmatch = link.match(
+                    /(?:https?:\/\/)?t\.me\/([a-zA-Z0-9_]+)\/(\d+)/,
+                );
+                const tgmatch = link.match(
+                    /tg:\/\/resolve\?domain=([a-zA-Z0-9_]+).*post=(\d+)/,
+                );
+                if (tmatch)
+                    return `https://t.me/${tmatch[1]}/${tmatch[2]}?embed=1`;
+                if (tgmatch)
+                    return `https://t.me/${tgmatch[1]}/${tgmatch[2]}?embed=1`;
+                return null;
+            }
+
+            async function fetchTelegramPost(link) {
+                const embedUrl = normalizeTelegramLink(link);
+                if (!embedUrl) {
+                    return {
+                        error: "Invalid Telegram link. Use format: https://t.me/username/post_id",
+                    };
+                }
+                const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(embedUrl)}`;
+                try {
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) throw new Error("Proxy request failed");
+                    const htmlString = await response.text();
+                    return parsePostContent(htmlString);
+                } catch (error) {
+                    console.error("codetabs fetch failed:", error);
+                    return {
+                        error: "Unable to fetch post. Try serving the app via a local server or use a different public proxy.",
+                    };
+                }
+            }
+
+            function parsePostContent(htmlString) {
+                try {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlString, "text/html");
+                    const messageText = doc.querySelector(
+                        ".tgme_widget_message_text",
+                    );
+                    const authorName = doc.querySelector(
+                        ".tgme_widget_message_author .tgme_widget_message_owner_name",
+                    );
+                    const photo = doc.querySelector(
+                        ".tgme_widget_message_photo_wrap",
+                    );
+                    const video = doc.querySelector(
+                        ".tgme_widget_message_video",
+                    );
+                    if (!messageText && !photo && !video) {
+                        return {
+                            error: "Could not find post content. Is the link correct and public?",
+                        };
+                    }
+                    const result = {
+                        title: authorName
+                            ? authorName.textContent.trim()
+                            : "Telegram Post",
+                        content: "",
+                    };
+                    if (messageText) {
+                        result.content += `<div class="text-block">${messageText.innerHTML}</div>`;
+                    }
+                    if (photo) {
+                        const style = photo.getAttribute("style");
+                        const urlMatch = style
+                            ? style.match(/url\(['"]?([^'"]+)['"]?\)/)
+                            : null;
+                        if (urlMatch && urlMatch[1]) {
+                            result.content += `<img src="${urlMatch[1]}" alt="Post Image">`;
+                        }
+                    }
+                    if (video) {
+                        const videoTag = video.querySelector("video");
+                        if (videoTag && videoTag.src) {
+                            result.content += `<video controls src="${videoTag.src}"></video>`;
+                        }
+                    }
+                    return { success: true, data: result };
+                } catch (parseError) {
+                    console.error("Parse error:", parseError);
+                    return { error: "Failed to parse post content." };
+                }
+            }
+
+            function renderPostContent(postData) {
+                const postDisplay = document.getElementById("postDisplay");
+                const errorMessage = document.getElementById("errorMessage");
+                errorMessage.style.display = "none";
+                if (postData.error) {
+                    errorMessage.textContent = postData.error;
+                    errorMessage.style.display = "block";
+                    postDisplay.innerHTML = "";
                     return;
                 }
-                window.location.href = `reader.html?link=${encodeURIComponent(link)}`;
+                if (!postData.success || !postData.data) {
+                    errorMessage.textContent = "An unexpected error occurred.";
+                    errorMessage.style.display = "block";
+                    postDisplay.innerHTML = "";
+                    return;
+                }
+                const { title, content } = postData.data;
+                postDisplay.innerHTML = `<h2>${title}</h2>${content}`;
             }
+
+            async function loadTelegramPost() {
+                const linkInput = document.getElementById("telegramLink");
+                const loadButton = document.getElementById("loadButton");
+                const telegramLink = linkInput.value.trim();
+                const errorMessage = document.getElementById("errorMessage");
+                if (!telegramLink) {
+                    errorMessage.textContent = "Please enter a Telegram link";
+                    errorMessage.style.display = "block";
+                    return;
+                }
+                const normalized = normalizeTelegramLink(telegramLink);
+                if (!normalized) {
+                    errorMessage.textContent =
+                        "Invalid Telegram link. Use format: https://t.me/username/post_id";
+                    errorMessage.style.display = "block";
+                    return;
+                }
+                document.getElementById("postDisplay").innerHTML =
+                    "<p>Loading from Telegram...</p>";
+                errorMessage.style.display = "none";
+                loadButton.disabled = true;
+                const result = await fetchTelegramPost(normalized);
+                renderPostContent(result);
+                loadButton.disabled = false;
+            }
+
+            function showHero() {
+                document.querySelector(".hero").style.display = "";
+                document.querySelector(".reader-container").style.display =
+                    "none";
+            }
+            function showReader(link) {
+                document.querySelector(".hero").style.display = "none";
+                document.querySelector(".reader-container").style.display = "";
+                if (link) {
+                    document.getElementById("telegramLink").value = link;
+                    loadTelegramPost();
+                } else {
+                    document.getElementById("postDisplay").innerHTML =
+                        `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
+                    document.getElementById("errorMessage").style.display =
+                        "none";
+                    document.getElementById("telegramLink").value = "";
+                }
+            }
+
+            window.addEventListener("DOMContentLoaded", () => {
+                const defaultTelegramLink = "https://t.me/korovany/1494";
+                const urlParams = new URLSearchParams(window.location.search);
+                const initialLink = urlParams.get("link");
+                if (initialLink) {
+                    showReader(initialLink);
+                } else {
+                    showHero();
+                }
+                document.getElementById("goToReaderBtn").onclick = () => {
+                    const rawLink = document
+                        .getElementById("homeLink")
+                        .value.trim();
+                    const link = rawLink || defaultTelegramLink;
+                    showReader(link);
+                };
+                document.getElementById("backToHomeBtn").onclick = () => {
+                    showHero();
+                };
+            });
         </script>
     </head>
     <body>
         <header>
-            <h1>Telegram Reader PWA</h1>
-            <p>Your standalone web app for reading Telegram posts</p>
+            <div class="header-container page-shell">
+                <h1>tg-Reader</h1>
+                <p>Your standalone web app for reading Telegram posts</p>
+            </div>
         </header>
-        <section class="hero">
+        <section class="hero page-shell">
             <h1>Read Telegram Posts in Your Browser</h1>
             <p>
                 Access Telegram posts without needing a Telegram account. Our
@@ -55,33 +223,43 @@
                     id="homeLink"
                     placeholder="e.g., https://t.me/korovany/1494"
                 />
-                <button class="cta-button" onclick="goToReader()">
-                    Read Post
-                </button>
+                <button class="cta-button" id="goToReaderBtn">Read Post</button>
             </div>
         </section>
-        <div class="example-link">
-            <strong>Test with this link:</strong><br />
-            <code>https://t.me/korovany/1494</code><br />
-            <small>(Paste it above and click "Read Post")</small>
+
+        <div class="reader-container page-shell" style="display: none">
+            <div class="link-input-group">
+                <input
+                    type="text"
+                    id="telegramLink"
+                    placeholder="e.g., https://t.me/korovany/1494"
+                />
+                <button id="loadButton" onclick="loadTelegramPost()">
+                    Load Post
+                </button>
+                <button
+                    id="backToHomeBtn"
+                    style="background: #007bff; color: white"
+                >
+                    Back
+                </button>
+            </div>
+            <div id="postDisplay" class="post-content">
+                <p>
+                    Enter a Telegram link above and click "Load Post" to see the
+                    content.
+                </p>
+            </div>
+            <p
+                id="errorMessage"
+                class="error-message"
+                style="display: none"
+            ></p>
         </div>
         <footer>
             <p>
                 Powered by pure JavaScript and modern web technologies • Works
                 offline • No server required
-            </p>
-            <p>
-                <a
-                    href="reader.html"
-                    style="color: #007bff; text-decoration: none"
-                    >Read a post</a
-                >
-                •
-                <a
-                    href="reader.html?link=https://t.me/korovany/1494"
-                    style="color: #007bff; text-decoration: none"
-                    >Test link</a
-                >
             </p>
         </footer>
     </body>
