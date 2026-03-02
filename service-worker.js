@@ -1,6 +1,7 @@
 // Simple cache-first service worker for tg-reader PWA
 
-const CACHE_NAME = "tg-reader-cache-v2";
+const CACHE_NAME = "tg-reader-cache-v3";
+const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v2";
 const urlsToCache = [
   "/",
   "index.html",
@@ -12,6 +13,13 @@ const urlsToCache = [
   // 'icons/icon-192x192.png',
   // 'icons/icon-512x512.png',
 ];
+const NETWORK_FIRST_ASSETS = new Set([
+  "/",
+  "/index.html",
+  "/reader.html",
+  "/styles.css",
+  "/manifest.json",
+]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -29,9 +37,10 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) => {
+        const keep = [CACHE_NAME, POSTS_CACHE_NAME];
         return Promise.all(
           keys.map((key) => {
-            if (key !== CACHE_NAME) return caches.delete(key);
+            if (!keep.includes(key)) return caches.delete(key);
             return Promise.resolve();
           }),
         );
@@ -40,44 +49,106 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+function shouldUseNetworkFirst(request) {
+  if (request.mode === "navigate") return true;
+  const url = new URL(request.url);
+  return NETWORK_FIRST_ASSETS.has(url.pathname);
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok && response.type !== "opaque") {
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    if (request.mode === "navigate") {
+      return cache.match("/index.html");
+    }
+    return new Response("Offline", {
+      status: 503,
+      statusText: "Service Unavailable",
+    });
+  }
+}
+
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) {
+    return cached;
+  }
+  try {
+    const response = await fetch(request);
+    if (response && response.ok && response.type !== "opaque") {
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    if (request.mode === "navigate") {
+      return cache.match("/index.html");
+    }
+    return new Response("Offline", {
+      status: 503,
+      statusText: "Service Unavailable",
+    });
+  }
+}
+
 self.addEventListener("fetch", (event) => {
-  // Only handle GET requests
   if (event.request.method !== "GET") return;
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // If response is invalid, just return it without caching
-          if (
-            !networkResponse ||
-            networkResponse.status !== 200 ||
-            networkResponse.type === "opaque"
-          ) {
-            return networkResponse;
+  const isProxyRequest = event.request.url.includes(
+    "https://api.codetabs.com/v1/proxy",
+  );
+  if (isProxyRequest) {
+    event.respondWith(
+      caches.open(POSTS_CACHE_NAME).then((cache) => {
+        return cache.match(event.request).then((cached) => {
+          const fetchAndCache = () =>
+            fetch(event.request)
+              .then((networkResponse) => {
+                if (
+                  networkResponse &&
+                  networkResponse.status === 200 &&
+                  networkResponse.type !== "opaque"
+                ) {
+                  cache.put(event.request, networkResponse.clone());
+                }
+                return networkResponse;
+              })
+              .catch(() => {
+                return cached;
+              });
+          if (cached) {
+            fetchAndCache().catch(() => {});
+            return cached;
           }
-          // Cache a clone of the network response for future use
-          const responseClone = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone).catch(() => {
-              /* ignore cache put failures */
+          return fetchAndCache().then((response) => {
+            if (response) {
+              return response;
+            }
+            return new Response("Offline", {
+              status: 503,
+              statusText: "Service Unavailable",
             });
           });
-          return networkResponse;
-        })
-        .catch(() => {
-          // Fallback: try to serve index.html for navigation requests, otherwise fail
-          if (event.request.mode === "navigate") {
-            return caches.match("index.html");
-          }
-          return new Response("Offline", {
-            status: 503,
-            statusText: "Service Unavailable",
-          });
         });
-    }),
-  );
+      }),
+    );
+    return;
+  }
+
+  if (shouldUseNetworkFirst(event.request)) {
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(event.request));
 });

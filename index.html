@@ -106,8 +106,182 @@
                 });
             }
 
+            const allowedTags = new Set([
+                "a",
+                "b",
+                "strong",
+                "em",
+                "i",
+                "u",
+                "span",
+                "p",
+                "div",
+                "br",
+                "code",
+                "pre",
+            ]);
+
+            function escapeHtml(value) {
+                if (!value) return "";
+                return value
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function sanitizeUrl(value) {
+                if (!value) return null;
+                let href = value.trim();
+                if (href.startsWith("//")) {
+                    href = `https:${href}`;
+                }
+                try {
+                    const url = new URL(href);
+                    if (!["http:", "https:", "tg:"].includes(url.protocol)) {
+                        return null;
+                    }
+                } catch {
+                    return null;
+                }
+                return href;
+            }
+
+            function decodeLinkText(value) {
+                try {
+                    return decodeURIComponent(value);
+                } catch {
+                    return value;
+                }
+            }
+
+            function sanitizeMessageHtml(element) {
+                if (!element) return "";
+                const fragment = document.createElement("div");
+                fragment.appendChild(element.cloneNode(true));
+                const cleanNode = (node) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return escapeHtml(node.textContent);
+                    }
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        return "";
+                    }
+                    const tag = node.tagName.toLowerCase();
+                    if (!allowedTags.has(tag)) {
+                        return Array.from(node.childNodes)
+                            .map(cleanNode)
+                            .join("");
+                    }
+                    const inner = Array.from(node.childNodes)
+                        .map(cleanNode)
+                        .join("");
+                    if (tag === "br") {
+                        return "<br />";
+                    }
+                    if (tag === "a") {
+                        const href = sanitizeUrl(node.getAttribute("href"));
+                        if (!href) {
+                            return inner;
+                        }
+                        const display =
+                            inner.trim() ||
+                            escapeHtml(
+                                decodeLinkText(href.replace(/https?:\/\//, "")),
+                            );
+                        return `<a href="${href}" target="_blank" rel="noreferrer">${display}</a>`;
+                    }
+                    return `<${tag}>${inner}</${tag}>`;
+                };
+                return Array.from(fragment.childNodes).map(cleanNode).join("");
+            }
+
             function buildCacheKey(channel, postId) {
                 return `${channel}/${postId}`;
+            }
+
+            const proxyServices = [
+                {
+                    name: "CodeTabs",
+                    buildUrl: (target) =>
+                        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(
+                            target,
+                        )}`,
+                },
+                {
+                    name: "AllOrigins",
+                    buildUrl: (target) =>
+                        `https://api.allorigins.win/raw?url=${encodeURIComponent(
+                            target,
+                        )}`,
+                },
+            ];
+
+            let activeAbortController = null;
+            let fallbackTimer = null;
+            let countdownInterval = null;
+            let countdownRemaining = 0;
+            let loaderOverlayEl = null;
+            let loaderMessageEl = null;
+            let countdownEl = null;
+
+            function ensureLoaderElements() {
+                if (loaderOverlayEl) return;
+                loaderOverlayEl = document.getElementById("loadingOverlay");
+                loaderMessageEl = document.getElementById("loaderMessage");
+                countdownEl = document.getElementById("fallbackCountdown");
+            }
+
+            function updateCountdownText(nextServiceName) {
+                ensureLoaderElements();
+                if (!countdownEl) return;
+                if (!nextServiceName) {
+                    countdownEl.textContent = "Waiting for response…";
+                    return;
+                }
+                countdownEl.textContent = `Switching to ${nextServiceName} in ${countdownRemaining}s`;
+            }
+
+            function clearFallbackTimers() {
+                clearTimeout(fallbackTimer);
+                clearInterval(countdownInterval);
+                fallbackTimer = null;
+                countdownInterval = null;
+            }
+
+            function showLoadingOverlay(serviceName, nextServiceName) {
+                ensureLoaderElements();
+                if (!loaderOverlayEl) return;
+                loaderOverlayEl.classList.add("active");
+                if (loaderMessageEl) {
+                    loaderMessageEl.textContent = `Loading via ${serviceName}…`;
+                }
+                countdownRemaining = 10;
+                updateCountdownText(nextServiceName);
+                clearFallbackTimers();
+                const upcoming = nextServiceName;
+                countdownInterval = setInterval(() => {
+                    countdownRemaining = Math.max(countdownRemaining - 1, 0);
+                    updateCountdownText(upcoming);
+                }, 1000);
+                fallbackTimer = setTimeout(() => {
+                    if (!upcoming) {
+                        updateCountdownText(null);
+                        return;
+                    }
+                    if (loaderMessageEl) {
+                        loaderMessageEl.textContent = `No response from ${serviceName}; switching to ${upcoming}…`;
+                    }
+                    activeAbortController?.abort();
+                }, 10000);
+            }
+
+            function stopLoadingOverlay() {
+                ensureLoaderElements();
+                clearFallbackTimers();
+                if (loaderOverlayEl) {
+                    loaderOverlayEl.classList.remove("active");
+                }
             }
 
             function readPostCache(channel, postId) {
@@ -145,6 +319,72 @@
                 }
             }
 
+            async function fetchTelegramPost(link, { showLoader = true } = {}) {
+                try {
+                    return await tryFetchWithService(link, 0, { showLoader });
+                } catch (error) {
+                    stopLoadingOverlay();
+                    console.error("Proxy chain failed:", error);
+                    return {
+                        error: "Unable to fetch the post after trying fallback services. Please try again later.",
+                    };
+                }
+            }
+
+            async function tryFetchWithService(
+                link,
+                index,
+                { showLoader = true } = {},
+            ) {
+                if (index >= proxyServices.length) {
+                    throw new Error("All proxy services failed");
+                }
+                const service = proxyServices[index];
+                if (showLoader) {
+                    showLoadingOverlay(
+                        service.name,
+                        proxyServices[index + 1]?.name ?? null,
+                    );
+                } else {
+                    clearFallbackTimers();
+                }
+                const controller = new AbortController();
+                activeAbortController = controller;
+                try {
+                    const response = await fetch(service.buildUrl(link), {
+                        signal: controller.signal,
+                    });
+                    if (!response.ok) {
+                        throw new Error(
+                            `${service.name} returned ${response.status}`,
+                        );
+                    }
+                    const htmlString = await response.text();
+                    if (showLoader) {
+                        stopLoadingOverlay();
+                    }
+                    return parsePostContent(htmlString);
+                } catch (error) {
+                    if (showLoader) {
+                        clearFallbackTimers();
+                    }
+                    if (controller.signal.aborted) {
+                        if (index + 1 < proxyServices.length) {
+                            return tryFetchWithService(link, index + 1, {
+                                showLoader,
+                            });
+                        }
+                        throw new Error("Proxy chain aborted");
+                    }
+                    if (index + 1 < proxyServices.length) {
+                        return tryFetchWithService(link, index + 1, {
+                            showLoader,
+                        });
+                    }
+                    throw error;
+                }
+            }
+
             function updatePostFooter(channel, postId) {
                 const footer = document.getElementById("postFooter");
                 if (!footer) return;
@@ -155,8 +395,45 @@
                 }
                 const lastOpened =
                     cached.lastOpened ?? cached.cachedAt ?? Date.now();
-                const formatted = new Date(lastOpened).toLocaleString();
-                footer.textContent = `Last opened: ${formatted}`;
+                const formattedOpened = new Date(lastOpened).toLocaleString();
+                const statusParts = [`Last opened ${formattedOpened}`];
+                const cachedAt = cached.cachedAt ?? lastOpened;
+                if (cachedAt && cachedAt !== lastOpened) {
+                    const formattedCached = new Date(cachedAt).toLocaleString();
+                    statusParts.push(`Cached ${formattedCached}`);
+                }
+                footer.textContent = statusParts.join(" • ");
+            }
+
+            function updatePostStatus(postData, parsed) {
+                const statusEl = document.getElementById("postStatus");
+                if (!statusEl) return;
+                const infoParts = [];
+                if (postData?.contentTypes?.length) {
+                    infoParts.push(
+                        `Contains ${postData.contentTypes.join(" + ")}`,
+                    );
+                }
+                if (postData?.reply) {
+                    const replyParts = [];
+                    if (postData.reply.channel)
+                        replyParts.push(`@${postData.reply.channel}`);
+                    if (postData.reply.postId)
+                        replyParts.push(`#${postData.reply.postId}`);
+                    const replyLabel = replyParts.length
+                        ? replyParts.join(" ")
+                        : "an earlier message";
+                    infoParts.push(`Replying to ${replyLabel}`);
+                }
+                if (!infoParts.length) {
+                    statusEl.innerHTML = "";
+                    statusEl.style.display = "none";
+                    return;
+                }
+                statusEl.innerHTML = infoParts
+                    .map((part) => `<span>${part}</span>`)
+                    .join("");
+                statusEl.style.display = "flex";
             }
 
             function setStatusMessage(text = "", variant = "error") {
@@ -255,27 +532,6 @@
                 showReader(`https://t.me/${currentChannel}/${targetId}`);
             }
 
-            async function fetchTelegramPost(link) {
-                const embedUrl = normalizeTelegramLink(link);
-                if (!embedUrl) {
-                    return {
-                        error: "Invalid Telegram link. Use format: https://t.me/username/post_id",
-                    };
-                }
-                const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(embedUrl)}`;
-                try {
-                    const response = await fetch(proxyUrl);
-                    if (!response.ok) throw new Error("Proxy request failed");
-                    const htmlString = await response.text();
-                    return parsePostContent(htmlString);
-                } catch (error) {
-                    console.error("codetabs fetch failed:", error);
-                    return {
-                        error: "Unable to fetch post. Try serving the app via a local server or use a different public proxy.",
-                    };
-                }
-            }
-
             function parsePostContent(htmlString) {
                 try {
                     const parser = new DOMParser();
@@ -302,6 +558,7 @@
                             ? authorName.textContent.trim()
                             : "Telegram Post",
                         content: "",
+                        contentTypes: [],
                     };
                     const dateNode = doc.querySelector(
                         ".tgme_widget_message_date time",
@@ -312,7 +569,12 @@
                         ).toLocaleString();
                     }
                     if (messageText) {
-                        result.content += `<div class="text-block">${messageText.innerHTML}</div>`;
+                        const safeHtml =
+                            sanitizeMessageHtml(messageText).trim();
+                        if (safeHtml) {
+                            result.content += `<div class="text-block">${safeHtml}</div>`;
+                            result.contentTypes.push("Text");
+                        }
                     }
                     const replyBlock = doc.querySelector(
                         ".tgme_widget_message_reply",
@@ -336,10 +598,16 @@
                             ? parseTelegramLink(replyLink)
                             : null;
                         if (replyTextEl) {
-                            const replyText = replyTextEl.innerHTML.trim();
-                            if (replyText) {
+                            const replyHtml =
+                                sanitizeMessageHtml(replyTextEl).trim();
+                            const replyText = escapeHtml(
+                                replyTextEl.textContent,
+                            ).trim();
+                            const replyBody = replyHtml || replyText;
+                            if (replyBody) {
                                 result.reply = {
-                                    text: replyText,
+                                    html: replyBody,
+                                    text: replyText || replyBody,
                                     author: replyAuthor,
                                     link: replyLink,
                                     channel: parsedReplyLink?.channel ?? null,
@@ -355,12 +623,14 @@
                             : null;
                         if (urlMatch && urlMatch[1]) {
                             result.content += `<img src="${urlMatch[1]}" alt="Post Image">`;
+                            result.contentTypes.push("Image");
                         }
                     }
                     if (video) {
                         const videoTag = video.querySelector("video");
                         if (videoTag && videoTag.src) {
                             result.content += `<video controls src="${videoTag.src}"></video>`;
+                            result.contentTypes.push("Video");
                         }
                     }
                     return { success: true, data: result };
@@ -371,12 +641,14 @@
             }
 
             function buildReplySection(reply) {
-                if (!reply?.text) {
+                const replyBody =
+                    reply?.html ?? (reply?.text ? escapeHtml(reply.text) : "");
+                if (!replyBody) {
                     return "";
                 }
                 const metaParts = [];
                 if (reply.author) metaParts.push(reply.author);
-                else if (reply.channel) metaParts.push(reply.channel);
+                else if (reply.channel) metaParts.push(`@${reply.channel}`);
                 else metaParts.push("original message");
                 if (reply.postId) metaParts.push(`#${reply.postId}`);
                 const metaText = metaParts.join(" ");
@@ -389,7 +661,7 @@
                             Replying to <strong>${metaText}</strong>
                             ${linkHtml ? `• ${linkHtml}` : ""}
                         </div>
-                        <div class="reply-banner__text">${reply.text}</div>
+                        <div class="reply-banner__text">${replyBody}</div>
                     </div>
                 `;
             }
@@ -410,6 +682,7 @@
                 if (!postData.success || !postData.data) {
                     document.getElementById("postBody").innerHTML = "";
                     updatePostMeta(canonicalLink, null);
+                    updatePostStatus(null);
                     if (parsed) {
                         updatePostFooter(parsed.channel, parsed.postId);
                     }
@@ -426,6 +699,7 @@
                 if (parsed) {
                     updatePostFooter(parsed.channel, parsed.postId);
                 }
+                updatePostStatus(postData.data, parsed);
             }
 
             async function loadTelegramPost(
@@ -448,6 +722,8 @@
                 }
                 const parsed = parseTelegramLink(normalized);
                 const canonicalLink = parsed?.cleanLink ?? normalized;
+                activeAbortController?.abort();
+                activeAbortController = null;
                 lastCanonicalLink = canonicalLink;
                 if (linkOverride) {
                     linkInput.value = parsed?.cleanLink ?? linkOverride;
@@ -463,8 +739,30 @@
                     "<p>Loading from Telegram...</p>";
                 updatePostMeta(canonicalLink, null);
                 setStatusMessage();
+                let cachedEntry = null;
+                if (parsed) {
+                    cachedEntry = readPostCache(parsed.channel, parsed.postId);
+                    if (cachedEntry) {
+                        const cachedAt =
+                            cachedEntry.cachedAt ??
+                            cachedEntry.lastOpened ??
+                            Date.now();
+                        const formatted = new Date(cachedAt).toLocaleString();
+                        renderPostContent(
+                            { success: true, data: cachedEntry.data },
+                            canonicalLink,
+                            {
+                                overrideStatusText: `Showing cached copy from ${formatted} while refreshing…`,
+                                statusVariant: "info",
+                            },
+                        );
+                    }
+                }
                 loadButton.disabled = true;
-                const result = await fetchTelegramPost(normalized);
+                const shouldShowLoader = !cachedEntry;
+                const result = await fetchTelegramPost(normalized, {
+                    showLoader: shouldShowLoader,
+                });
                 if (parsed && !result.success) {
                     const cached = readPostCache(parsed.channel, parsed.postId);
                     if (cached) {
@@ -516,6 +814,7 @@
                 updatePostMeta(null, null);
                 setStatusMessage();
                 updatePostFooter(null, null);
+                updatePostStatus(null);
                 document.getElementById("telegramLink").value = "";
                 lastCanonicalLink = null;
                 if (pushHistory || replaceHistory) {
@@ -556,10 +855,17 @@
                 } else {
                     const legacyLink = urlParams.get("link");
                     if (legacyLink) {
-                        initialLink = legacyLink;
+                        const normalized = normalizeTelegramLink(legacyLink);
+                        if (normalized) {
+                            const parsed = parseTelegramLink(normalized);
+                            if (parsed) {
+                                initialLink = `https://t.me/${parsed.channel}/${parsed.postId}`;
+                            }
+                        }
                     }
                 }
                 if (initialLink) {
+                    document.getElementById("homeLink").value = initialLink;
                     showReader(initialLink, {
                         pushHistory: false,
                         replaceHistory: true,
@@ -594,12 +900,11 @@
                     if (!currentChannel) return;
                     showReader(`https://t.me/${currentChannel}/1`);
                 };
-                document
-                    .getElementById("headerLink")
-                    .addEventListener("click", (event) => {
-                        event.preventDefault();
-                        showHero({ pushHistory: true, replaceHistory: true });
-                    });
+                const headerLinkEl = document.getElementById("headerLink");
+                headerLinkEl?.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    showHero({ pushHistory: true, replaceHistory: true });
+                });
                 initThemeToggle();
                 setNavigationButtonsState();
                 window.addEventListener("popstate", (event) => {
@@ -630,7 +935,7 @@
     <body>
         <header>
             <div class="header-shell page-shell">
-                <a class="header-link" id="headerLink" href="#">
+                <a class="header-link" id="headerLink" href="/">
                     <div class="header-container">
                         <h1>tg-Reader</h1>
                         <p>
@@ -685,6 +990,11 @@
             </div>
             <div id="postDisplay" class="post-content">
                 <div id="postMeta" class="post-meta"></div>
+                <div
+                    id="postStatus"
+                    class="post-status"
+                    aria-live="polite"
+                ></div>
                 <div id="postBody">
                     <p>
                         Enter a Telegram link above and click "Load Post" to see
@@ -692,6 +1002,13 @@
                     </p>
                 </div>
                 <div id="postFooter" class="post-footer"></div>
+            </div>
+            <div id="loadingOverlay" class="loading-overlay" aria-live="polite">
+                <div class="loading-inner">
+                    <div class="loader-spinner" aria-hidden="true"></div>
+                    <p id="loaderMessage">Loading…</p>
+                    <p id="fallbackCountdown" class="fallback-countdown"></p>
+                </div>
             </div>
             <div class="post-controls">
                 <button id="firstPostBtn" class="nav-button primary-button">
