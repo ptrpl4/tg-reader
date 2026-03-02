@@ -215,6 +215,13 @@
                             target,
                         )}`,
                 },
+                {
+                    name: "ThingProxy",
+                    buildUrl: (target) =>
+                        `https://thingproxy.freeboard.io/fetch/${encodeURIComponent(
+                            target,
+                        )}`,
+                },
             ];
 
             let activeAbortController = null;
@@ -256,7 +263,7 @@
                 if (loaderMessageEl) {
                     loaderMessageEl.textContent = `Loading via ${serviceName}…`;
                 }
-                countdownRemaining = 10;
+                countdownRemaining = 3;
                 updateCountdownText(nextServiceName);
                 clearFallbackTimers();
                 const upcoming = nextServiceName;
@@ -273,7 +280,7 @@
                         loaderMessageEl.textContent = `No response from ${serviceName}; switching to ${upcoming}…`;
                     }
                     activeAbortController?.abort();
-                }, 10000);
+                }, 3000);
             }
 
             function stopLoadingOverlay() {
