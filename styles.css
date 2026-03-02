@@ -60,6 +60,9 @@ header {
     text-align: center;
     border-bottom: 1px solid var(--strong-border);
     box-shadow: var(--shadow-soft);
+    border-bottom-left-radius: 32px;
+    border-bottom-right-radius: 32px;
+    overflow: hidden;
 }
 .header-shell {
     display: flex;
@@ -147,11 +150,16 @@ footer {
 }
 
 /* Reader specific styles */
-.reader-container {
+.reader-shell {
+    position: relative;
     margin: 2rem auto;
+    padding-bottom: 2rem;
+}
+.reader-container {
+    margin: 0 auto;
     padding: 1.75rem;
     background: var(--surface);
-    border-radius: 22px;
+    border-radius: 32px;
     box-shadow: var(--shadow-soft);
     width: 100%;
     max-width: 640px;
@@ -312,6 +320,11 @@ footer {
         background 0.2s ease,
         transform 0.2s ease,
         box-shadow 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
 }
 .nav-button:hover:not(:disabled) {
     background: var(--primary-dark);
@@ -324,6 +337,64 @@ footer {
     color: rgba(255, 255, 255, 0.85);
     border-color: rgba(255, 255, 255, 0.6);
     box-shadow: none;
+}
+
+.floating-controls {
+    position: absolute;
+    top: 1.2rem;
+    right: -180px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    align-items: flex-end;
+    z-index: 4;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+.floating-controls--visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+.floating-controls .nav-button {
+    min-width: 160px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+}
+
+@media (max-width: 960px) {
+    .floating-controls {
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        right: auto;
+        top: auto;
+        transform: translateX(-50%);
+        max-width: calc(100% - 2rem);
+        flex-direction: row;
+        justify-content: center;
+        background: rgba(12, 15, 30, 0.88);
+        padding: 0.4rem;
+        border-radius: 32px;
+        box-shadow: 0 12px 30px rgba(3, 8, 18, 0.55);
+    }
+    .floating-controls .nav-button {
+        flex: 1;
+        min-width: 0;
+    }
+    .reader-shell.page-shell {
+        padding-left: 0;
+        padding-right: 0;
+        max-width: 100%;
+    }
+
+    .reader-container {
+        width: 100%;
+        border-radius: 28px;
+        margin: 0;
+        padding: 1.2rem 1rem 1.6rem;
+    }
 }
 
 .loading-overlay {

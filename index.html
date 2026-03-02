@@ -231,12 +231,27 @@
             let loaderOverlayEl = null;
             let loaderMessageEl = null;
             let countdownEl = null;
+            let floatingControlsEl = null;
 
             function ensureLoaderElements() {
                 if (loaderOverlayEl) return;
                 loaderOverlayEl = document.getElementById("loadingOverlay");
                 loaderMessageEl = document.getElementById("loaderMessage");
                 countdownEl = document.getElementById("fallbackCountdown");
+            }
+
+            function ensureFloatingControls() {
+                if (floatingControlsEl) return;
+                floatingControlsEl =
+                    document.querySelector(".floating-controls");
+            }
+
+            function setFloatingControlsVisibility(visible) {
+                ensureFloatingControls();
+                floatingControlsEl?.classList.toggle(
+                    "floating-controls--visible",
+                    Boolean(visible),
+                );
             }
 
             function updateCountdownText(nextServiceName) {
@@ -814,6 +829,7 @@
                 updatePostFooter(null, null);
                 document.getElementById("telegramLink").value = "";
                 lastCanonicalLink = null;
+                setFloatingControlsVisibility(false);
                 if (pushHistory || replaceHistory) {
                     updateHistory(null, null, replaceHistory);
                 }
@@ -825,6 +841,7 @@
             ) {
                 document.querySelector(".hero").style.display = "none";
                 document.querySelector(".reader-container").style.display = "";
+                setFloatingControlsVisibility(true);
                 if (link) {
                     document.getElementById("telegramLink").value = link;
                     loadTelegramPost(link, {
@@ -967,57 +984,66 @@
             </div>
         </section>
 
-        <div class="reader-container page-shell" style="display: none">
-            <div class="link-input-group">
-                <input
-                    type="text"
-                    id="telegramLink"
-                    placeholder="e.g., https://t.me/korovany/1494"
-                />
-                <button id="loadButton" class="primary-button">
-                    Load Post
-                </button>
-                <button
-                    id="backToHomeBtn"
-                    class="secondary-button"
-                    type="button"
+        <div class="reader-shell page-shell">
+            <div class="reader-container" style="display: none">
+                <div class="link-input-group">
+                    <input
+                        type="text"
+                        id="telegramLink"
+                        placeholder="e.g., https://t.me/korovany/1494"
+                    />
+                    <button id="loadButton" class="primary-button">
+                        Load Post
+                    </button>
+                    <button
+                        id="backToHomeBtn"
+                        class="secondary-button"
+                        type="button"
+                    >
+                        Back
+                    </button>
+                </div>
+                <div id="postDisplay" class="post-content">
+                    <div id="postMeta" class="post-meta"></div>
+                    <div id="postBody">
+                        <p>
+                            Enter a Telegram link above and click "Load Post" to
+                            see the content.
+                        </p>
+                    </div>
+                    <div id="postFooter" class="post-footer"></div>
+                </div>
+                <div
+                    id="loadingOverlay"
+                    class="loading-overlay"
+                    aria-live="polite"
                 >
-                    Back
-                </button>
-            </div>
-            <div id="postDisplay" class="post-content">
-                <div id="postMeta" class="post-meta"></div>
-                <div id="postBody">
-                    <p>
-                        Enter a Telegram link above and click "Load Post" to see
-                        the content.
-                    </p>
+                    <div class="loading-inner">
+                        <div class="loader-spinner" aria-hidden="true"></div>
+                        <p id="loaderMessage">Loading…</p>
+                        <p
+                            id="fallbackCountdown"
+                            class="fallback-countdown"
+                        ></p>
+                    </div>
                 </div>
-                <div id="postFooter" class="post-footer"></div>
+                <p
+                    id="errorMessage"
+                    class="error-message"
+                    style="display: none"
+                ></p>
             </div>
-            <div id="loadingOverlay" class="loading-overlay" aria-live="polite">
-                <div class="loading-inner">
-                    <div class="loader-spinner" aria-hidden="true"></div>
-                    <p id="loaderMessage">Loading…</p>
-                    <p id="fallbackCountdown" class="fallback-countdown"></p>
-                </div>
-            </div>
-            <div class="post-controls">
-                <button id="firstPostBtn" class="nav-button primary-button">
-                    First post
-                </button>
+            <div class="floating-controls" aria-label="Post navigation">
                 <button id="prevPostBtn" class="nav-button primary-button">
                     Previous
+                </button>
+                <button id="firstPostBtn" class="nav-button primary-button">
+                    First
                 </button>
                 <button id="nextPostBtn" class="nav-button primary-button">
                     Next
                 </button>
             </div>
-            <p
-                id="errorMessage"
-                class="error-message"
-                style="display: none"
-            ></p>
         </div>
         <footer>
             <p>
