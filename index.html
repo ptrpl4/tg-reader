@@ -405,37 +405,6 @@
                 footer.textContent = statusParts.join(" • ");
             }
 
-            function updatePostStatus(postData, parsed) {
-                const statusEl = document.getElementById("postStatus");
-                if (!statusEl) return;
-                const infoParts = [];
-                if (postData?.contentTypes?.length) {
-                    infoParts.push(
-                        `Contains ${postData.contentTypes.join(" + ")}`,
-                    );
-                }
-                if (postData?.reply) {
-                    const replyParts = [];
-                    if (postData.reply.channel)
-                        replyParts.push(`@${postData.reply.channel}`);
-                    if (postData.reply.postId)
-                        replyParts.push(`#${postData.reply.postId}`);
-                    const replyLabel = replyParts.length
-                        ? replyParts.join(" ")
-                        : "an earlier message";
-                    infoParts.push(`Replying to ${replyLabel}`);
-                }
-                if (!infoParts.length) {
-                    statusEl.innerHTML = "";
-                    statusEl.style.display = "none";
-                    return;
-                }
-                statusEl.innerHTML = infoParts
-                    .map((part) => `<span>${part}</span>`)
-                    .join("");
-                statusEl.style.display = "flex";
-            }
-
             function setStatusMessage(text = "", variant = "error") {
                 const statusEl = document.getElementById("errorMessage");
                 if (!statusEl) return;
@@ -499,16 +468,34 @@
                 }
                 currentChannel = parsed.channel;
                 currentPostId = parsed.postId;
-                const pieces = [];
-                pieces.push(`<span>${parsed.channel}</span>`);
-                pieces.push(`<span>Post #${parsed.postId}</span>`);
-                if (data?.publishedAt) {
-                    pieces.push(`<span>${data.publishedAt}</span>`);
+                const channelTitle = escapeHtml(data?.title ?? "Telegram Post");
+                const sublineParts = [];
+                if (parsed.postId) {
+                    sublineParts.push(`Post #${parsed.postId}`);
                 }
-                pieces.push(
-                    `<span><a href="${parsed.cleanLink}" target="_blank" rel="noreferrer">Open on Telegram</a></span>`,
-                );
-                metaEl.innerHTML = pieces.join("");
+                if (data?.publishedAtLabel) {
+                    sublineParts.push(data.publishedAtLabel);
+                }
+                const channelLink = `https://t.me/${parsed.channel}`;
+                metaEl.innerHTML = `
+                    <div class="post-meta__left">
+                        <p class="post-meta__left-title">${channelTitle}</p>
+                        ${
+                            sublineParts.length
+                                ? `<p class="post-meta__left-subline">${sublineParts.join(
+                                      " • ",
+                                  )}</p>`
+                                : ""
+                        }
+                    </div>
+                    <a
+                        class="post-meta__channel-link"
+                        href="${channelLink}"
+                        target="_blank"
+                        rel="noreferrer"
+                    >@${parsed.channel} ↗
+                    </a>
+                `;
                 setNavigationButtonsState();
             }
 
@@ -558,22 +545,30 @@
                             ? authorName.textContent.trim()
                             : "Telegram Post",
                         content: "",
-                        contentTypes: [],
                     };
                     const dateNode = doc.querySelector(
                         ".tgme_widget_message_date time",
                     );
                     if (dateNode && dateNode.getAttribute("datetime")) {
-                        result.publishedAt = new Date(
+                        const publishedDate = new Date(
                             dateNode.getAttribute("datetime"),
-                        ).toLocaleString();
+                        );
+                        result.publishedAtLabel = publishedDate.toLocaleString(
+                            undefined,
+                            {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                            },
+                        );
                     }
                     if (messageText) {
                         const safeHtml =
                             sanitizeMessageHtml(messageText).trim();
                         if (safeHtml) {
                             result.content += `<div class="text-block">${safeHtml}</div>`;
-                            result.contentTypes.push("Text");
                         }
                     }
                     const replyBlock = doc.querySelector(
@@ -623,14 +618,12 @@
                             : null;
                         if (urlMatch && urlMatch[1]) {
                             result.content += `<img src="${urlMatch[1]}" alt="Post Image">`;
-                            result.contentTypes.push("Image");
                         }
                     }
                     if (video) {
                         const videoTag = video.querySelector("video");
                         if (videoTag && videoTag.src) {
                             result.content += `<video controls src="${videoTag.src}"></video>`;
-                            result.contentTypes.push("Video");
                         }
                     }
                     return { success: true, data: result };
@@ -688,10 +681,9 @@
                     }
                     return;
                 }
-                const { title, content } = postData.data;
+                const { content } = postData.data;
                 const replySection = buildReplySection(postData.data.reply);
                 document.getElementById("postBody").innerHTML = `
-                    <h2>${title}</h2>
                     ${replySection}
                     ${content}
                 `;
@@ -699,7 +691,6 @@
                 if (parsed) {
                     updatePostFooter(parsed.channel, parsed.postId);
                 }
-                updatePostStatus(postData.data, parsed);
             }
 
             async function loadTelegramPost(
@@ -814,7 +805,6 @@
                 updatePostMeta(null, null);
                 setStatusMessage();
                 updatePostFooter(null, null);
-                updatePostStatus(null);
                 document.getElementById("telegramLink").value = "";
                 lastCanonicalLink = null;
                 if (pushHistory || replaceHistory) {
@@ -990,11 +980,6 @@
             </div>
             <div id="postDisplay" class="post-content">
                 <div id="postMeta" class="post-meta"></div>
-                <div
-                    id="postStatus"
-                    class="post-status"
-                    aria-live="polite"
-                ></div>
                 <div id="postBody">
                     <p>
                         Enter a Telegram link above and click "Load Post" to see
