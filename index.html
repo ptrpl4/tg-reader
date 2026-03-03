@@ -407,24 +407,42 @@
                 }
             }
 
-            function updatePostFooter(channel, postId) {
+            function updatePostFooter(channel, postId, canonicalLink) {
                 const footer = document.getElementById("postFooter");
                 if (!footer) return;
                 const cached = readPostCache(channel, postId);
-                if (!cached) {
-                    footer.textContent = "";
-                    return;
+                const statusParts = [];
+                if (cached) {
+                    const lastOpened =
+                        cached.lastOpened ?? cached.cachedAt ?? Date.now();
+                    const formattedOpened = new Date(
+                        lastOpened,
+                    ).toLocaleString();
+                    statusParts.push(`Last opened ${formattedOpened}`);
+                    const cachedAt = cached.cachedAt ?? lastOpened;
+                    if (cachedAt && cachedAt !== lastOpened) {
+                        const formattedCached = new Date(
+                            cachedAt,
+                        ).toLocaleString();
+                        statusParts.push(`Cached ${formattedCached}`);
+                    }
                 }
-                const lastOpened =
-                    cached.lastOpened ?? cached.cachedAt ?? Date.now();
-                const formattedOpened = new Date(lastOpened).toLocaleString();
-                const statusParts = [`Last opened ${formattedOpened}`];
-                const cachedAt = cached.cachedAt ?? lastOpened;
-                if (cachedAt && cachedAt !== lastOpened) {
-                    const formattedCached = new Date(cachedAt).toLocaleString();
-                    statusParts.push(`Cached ${formattedCached}`);
-                }
-                footer.textContent = statusParts.join(" • ");
+                const infoHtml = statusParts.length
+                    ? `<div class="post-footer__info">${statusParts.join(
+                          " • ",
+                      )}</div>`
+                    : "";
+                const linkLabel =
+                    channel && postId
+                        ? `Open @${channel} #${postId} on Telegram`
+                        : "Open on Telegram";
+                const linkHtml = canonicalLink
+                    ? `<a class="post-footer__link" href="${canonicalLink}" target="_blank" rel="noreferrer">${linkLabel}</a>`
+                    : "";
+                footer.innerHTML = `
+                    ${infoHtml}
+                    ${linkHtml ? `<div class="post-footer__link-wrap">${linkHtml}</div>` : ""}
+                `;
             }
 
             function setStatusMessage(text = "", variant = "error") {
@@ -498,7 +516,6 @@
                 if (data?.publishedAtLabel) {
                     sublineParts.push(data.publishedAtLabel);
                 }
-                const channelLink = `https://t.me/${parsed.channel}`;
                 metaEl.innerHTML = `
                     <div class="post-meta__left">
                         <p class="post-meta__left-title">${channelTitle}</p>
@@ -510,13 +527,6 @@
                                 : ""
                         }
                     </div>
-                    <a
-                        class="post-meta__channel-link"
-                        href="${channelLink}"
-                        target="_blank"
-                        rel="noreferrer"
-                    >@${parsed.channel} ↗
-                    </a>
                 `;
                 setNavigationButtonsState();
             }
@@ -694,13 +704,15 @@
                 const variant =
                     overrideStatusText !== null ? statusVariant : "error";
                 setStatusMessage(statusText, variant);
+                const openLink = parsed?.cleanLink ?? canonicalLink ?? null;
                 if (!postData.success || !postData.data) {
                     document.getElementById("postBody").innerHTML = "";
                     updatePostMeta(canonicalLink, null);
-                    updatePostStatus(null);
-                    if (parsed) {
-                        updatePostFooter(parsed.channel, parsed.postId);
-                    }
+                    updatePostFooter(
+                        parsed?.channel ?? null,
+                        parsed?.postId ?? null,
+                        openLink,
+                    );
                     return;
                 }
                 const { content } = postData.data;
@@ -710,9 +722,11 @@
                     ${content}
                 `;
                 updatePostMeta(canonicalLink, postData.data);
-                if (parsed) {
-                    updatePostFooter(parsed.channel, parsed.postId);
-                }
+                updatePostFooter(
+                    parsed?.channel ?? null,
+                    parsed?.postId ?? null,
+                    openLink,
+                );
             }
 
             async function loadTelegramPost(
@@ -826,7 +840,7 @@
                     `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
                 updatePostMeta(null, null);
                 setStatusMessage();
-                updatePostFooter(null, null);
+                updatePostFooter(null, null, null);
                 document.getElementById("telegramLink").value = "";
                 lastCanonicalLink = null;
                 setFloatingControlsVisibility(false);
@@ -853,7 +867,7 @@
                         `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
                     updatePostMeta(null, null);
                     setStatusMessage();
-                    updatePostFooter(null, null);
+                    updatePostFooter(null, null, null);
                     document.getElementById("telegramLink").value = "";
                     lastCanonicalLink = null;
                 }
@@ -893,16 +907,6 @@
                         .value.trim();
                     const link = rawLink || defaultTelegramLink;
                     showReader(link);
-                };
-                document.getElementById("backToHomeBtn").onclick = () => {
-                    if (window.history.state?.channel) {
-                        window.history.back();
-                    } else {
-                        showHero({
-                            pushHistory: false,
-                            replaceHistory: true,
-                        });
-                    }
                 };
                 document.getElementById("loadButton").onclick = () =>
                     loadTelegramPost(null, { updateHistory: true });
@@ -994,13 +998,6 @@
                     />
                     <button id="loadButton" class="primary-button">
                         Load Post
-                    </button>
-                    <button
-                        id="backToHomeBtn"
-                        class="secondary-button"
-                        type="button"
-                    >
-                        Back
                     </button>
                 </div>
                 <div id="postDisplay" class="post-content">

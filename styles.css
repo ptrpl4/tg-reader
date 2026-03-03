@@ -154,6 +154,8 @@ footer {
     position: relative;
     margin: 2rem auto;
     padding-bottom: 2rem;
+    display: flex;
+    justify-content: center;
 }
 .reader-container {
     margin: 0 auto;
@@ -234,9 +236,6 @@ footer {
     border-top: 1px solid var(--border);
     padding-top: 1.5rem;
     color: var(--text);
-    background: var(--surface);
-    border-radius: 18px;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
     padding-bottom: 1.5rem;
 }
 .post-meta {
@@ -282,23 +281,6 @@ footer {
 }
 .reply-banner__text {
     font-weight: 500;
-}
-.post-meta__channel-link {
-    font-size: 0.9rem;
-    color: var(--primary-dark);
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 0.35rem 0.75rem;
-    border-radius: 999px;
-    background: rgba(78, 95, 209, 0.08);
-    transition:
-        background 0.2s ease,
-        color 0.2s ease;
-}
-.post-meta__channel-link:hover {
-    background: rgba(78, 95, 209, 0.18);
-    color: #fff;
 }
 .post-controls {
     margin-top: 1rem;
@@ -497,6 +479,26 @@ footer {
     color: var(--muted);
     border-top: 1px dashed rgba(15, 23, 42, 0.2);
     padding-top: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.post-footer__info {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+.post-footer__link-wrap {
+    margin-top: 0.15rem;
+}
+.post-footer__link {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+.post-footer__link:hover {
+    border-color: currentColor;
 }
 .error-message {
     color: #d43d3d;
@@ -516,15 +518,15 @@ footer {
 }
 
 :root[data-theme="dark"] {
-    --bg: #0b0f1c;
-    --surface: #131833;
-    --border: rgba(255, 255, 255, 0.1);
-    --text: #f7f9ff;
-    --muted: #b5c0e3;
-    --primary: #5f6ef7;
-    --primary-dark: #424ec5;
-    --accent: #26a79c;
-    --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.6);
+    --bg: #01030f;
+    --surface: #050b1a;
+    --border: rgba(255, 255, 255, 0.08);
+    --text: #f5f6ff;
+    --muted: #9a9ee5;
+    --primary: #a15dff;
+    --primary-dark: #6b3dd8;
+    --accent: #bd5dff;
+    --shadow-soft: 0 30px 80px rgba(0, 0, 0, 0.85);
 }
 
 :root[data-theme="dark"] body {
@@ -556,11 +558,6 @@ footer {
 
 :root[data-theme="dark"] .post-content {
     border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-:root[data-theme="dark"] .post-meta__channel-link {
-    background: rgba(124, 157, 246, 0.2);
-    color: var(--primary-dark);
 }
 
 :root[data-theme="dark"] footer {
