@@ -358,14 +358,17 @@ footer {
         max-width: calc(100% - 2rem);
         flex-direction: row;
         justify-content: center;
-        background: rgba(12, 15, 30, 0.88);
-        padding: 0.4rem;
-        border-radius: 32px;
-        box-shadow: 0 12px 30px rgba(3, 8, 18, 0.55);
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
     .floating-controls .nav-button {
         flex: 1;
         min-width: 0;
+        padding: 0.95rem 1.5rem;
+        border-radius: 999px;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.28);
     }
     .reader-shell.page-shell {
         padding-left: 0;
