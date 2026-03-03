@@ -248,9 +248,14 @@
 
             function setFloatingControlsVisibility(visible) {
                 ensureFloatingControls();
+                const isVisible = Boolean(visible);
                 floatingControlsEl?.classList.toggle(
                     "floating-controls--visible",
-                    Boolean(visible),
+                    isVisible,
+                );
+                floatingControlsEl?.setAttribute(
+                    "aria-hidden",
+                    isVisible ? "false" : "true",
                 );
             }
 

@@ -324,7 +324,9 @@ footer {
 .floating-controls {
     position: absolute;
     top: 1.2rem;
-    right: -180px;
+    left: 50%;
+    right: auto;
+    transform: translateX(calc(320px + 24px));
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
