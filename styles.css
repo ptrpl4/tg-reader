@@ -45,7 +45,7 @@ body {
 }
 .header-container {
     text-align: left;
-    padding: 1.5rem 0 0;
+    padding: 0.6rem 0 0;
 }
 .header-container h1,
 .header-container p {
@@ -56,7 +56,7 @@ body {
 header {
     background: var(--primary);
     color: white;
-    padding: 1.6rem 0 1.2rem;
+    padding: 0.9rem 0 0.7rem;
     text-align: center;
     border-bottom: 1px solid var(--strong-border);
     box-shadow: var(--shadow-soft);
