@@ -564,15 +564,15 @@ footer {
 }
 
 :root[data-theme="dark"] {
-    --bg: #01030f;
-    --surface: #050b1a;
-    --border: rgba(255, 255, 255, 0.08);
-    --text: #f5f6ff;
-    --muted: #9a9ee5;
-    --primary: #a15dff;
-    --primary-dark: #6b3dd8;
-    --accent: #bd5dff;
-    --shadow-soft: 0 30px 80px rgba(0, 0, 0, 0.85);
+    --bg: #07111d;
+    --surface: #0d1a2b;
+    --border: rgba(158, 183, 214, 0.2);
+    --text: #e8f0fb;
+    --muted: #97acc8;
+    --primary: #4c8dff;
+    --primary-dark: #2f6ed6;
+    --accent: #2db79c;
+    --shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.65);
 }
 
 :root[data-theme="dark"] body {
@@ -581,29 +581,29 @@ footer {
 }
 
 :root[data-theme="dark"] header {
-    background: var(--primary);
+    background: linear-gradient(135deg, #1b3f80 0%, #0f2d56 100%);
 }
 
 :root[data-theme="dark"] .reader-container {
     background: var(--surface);
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    border-color: rgba(158, 183, 214, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.52);
 }
 
 :root[data-theme="dark"] .link-input-group input {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(158, 183, 214, 0.3);
     color: var(--text);
 }
 
 :root[data-theme="dark"] .link-input-group button {
     background: var(--primary-dark);
-    border-color: var(--primary);
+    border-color: #5e97ff;
     color: #fff;
 }
 
 :root[data-theme="dark"] .post-content {
-    border-top-color: rgba(255, 255, 255, 0.1);
+    border-top-color: rgba(158, 183, 214, 0.25);
 }
 
 :root[data-theme="dark"] footer {
@@ -611,24 +611,36 @@ footer {
 }
 
 :root[data-theme="dark"] .theme-toggle {
-    background: rgba(0, 0, 0, 0.5);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(6, 16, 28, 0.72);
+    border-color: rgba(182, 206, 235, 0.4);
 }
 
 :root[data-theme="dark"] .reply-banner {
-    background: rgba(75, 95, 179, 0.15);
-    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(76, 141, 255, 0.16);
+    border-color: rgba(120, 170, 255, 0.7);
 }
 
 :root[data-theme="dark"] .secondary-button {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(158, 183, 214, 0.3);
     color: var(--text);
 }
 
 :root[data-theme="dark"] .reader-tools__field select {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(158, 183, 214, 0.3);
     color: var(--text);
+}
+
+:root[data-theme="dark"] .error-message {
+    color: #ffd5d5;
+    background: rgba(150, 35, 35, 0.25);
+    border-color: rgba(255, 148, 148, 0.45);
+}
+
+:root[data-theme="dark"] .error-message.info {
+    color: #ffdfa6;
+    background: rgba(120, 84, 24, 0.28);
+    border-color: rgba(255, 206, 117, 0.45);
 }
 
 :root[data-reader-text-size="small"] {
