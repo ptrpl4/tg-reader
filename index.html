@@ -85,6 +85,16 @@
                             ? "Switch to Light"
                             : "Switch to Dark";
                     toggleBtn.setAttribute(
+                        "data-emoji",
+                        theme === Theme.DARK ? "☀️" : "🌙",
+                    );
+                    toggleBtn.setAttribute(
+                        "aria-label",
+                        theme === Theme.DARK
+                            ? "Switch to light theme"
+                            : "Switch to dark theme",
+                    );
+                    toggleBtn.setAttribute(
                         "aria-pressed",
                         String(theme === Theme.DARK),
                     );
@@ -182,6 +192,16 @@
                     minimalModeBtn.textContent = normalized.minimal
                         ? "Minimal: On"
                         : "Minimal: Off";
+                    minimalModeBtn.setAttribute(
+                        "data-emoji",
+                        normalized.minimal ? "🧾" : "📰",
+                    );
+                    minimalModeBtn.setAttribute(
+                        "aria-label",
+                        normalized.minimal
+                            ? "Minimal mode on"
+                            : "Minimal mode off",
+                    );
                 }
 
                 if (persist) {
@@ -240,6 +260,30 @@
                     );
                 });
                 minimalModeBtn?.addEventListener("click", () => {
+                    applyReaderPreferences(
+                        {
+                            textSize:
+                                document.documentElement.dataset.readerTextSize,
+                            density:
+                                document.documentElement.dataset.readerDensity,
+                            minimal:
+                                document.documentElement.dataset.readerMinimal !==
+                                "true",
+                        },
+                        true,
+                    );
+                });
+                window.addEventListener("keydown", (event) => {
+                    if (event.defaultPrevented) return;
+                    if (event.key.toLowerCase() !== "m") return;
+                    const target = event.target;
+                    const isTypingContext =
+                        target instanceof HTMLElement &&
+                        (target.tagName === "INPUT" ||
+                            target.tagName === "TEXTAREA" ||
+                            target.tagName === "SELECT" ||
+                            target.isContentEditable);
+                    if (isTypingContext) return;
                     applyReaderPreferences(
                         {
                             textSize:
@@ -1116,14 +1160,24 @@
                         </p>
                     </div>
                 </a>
-                <button
-                    id="themeToggle"
-                    class="theme-toggle"
-                    type="button"
-                    aria-pressed="false"
-                >
-                    Switch to Dark
-                </button>
+                <div class="header-actions">
+                    <button
+                        id="minimalModeBtn"
+                        class="theme-toggle"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        Minimal: Off
+                    </button>
+                    <button
+                        id="themeToggle"
+                        class="theme-toggle"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        Switch to Dark
+                    </button>
+                </div>
             </div>
         </header>
         <section class="hero page-shell">
@@ -1170,16 +1224,6 @@
                             <option value="compact">Compact</option>
                             <option value="comfortable">Comfortable</option>
                         </select>
-                    </div>
-                    <div class="reader-tools__button">
-                        <button
-                            id="minimalModeBtn"
-                            class="secondary-button"
-                            type="button"
-                            aria-pressed="false"
-                        >
-                            Minimal: Off
-                        </button>
                     </div>
                 </div>
                 <div id="postDisplay" class="post-content">

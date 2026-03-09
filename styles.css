@@ -1,14 +1,14 @@
 :root {
-    --bg: #f6f6f5;
-    --surface: #ffffff;
-    --border: rgba(15, 23, 42, 0.08);
-    --text: #111323;
-    --muted: #5a6173;
-    --primary: #4e5fd1;
-    --primary-dark: #3f4799;
-    --accent: #1e8c79;
-    --shadow-soft: 0 18px 40px rgba(15, 23, 42, 0.08);
-    --strong-border: rgba(15, 23, 42, 0.18);
+    --bg: #f2f6fb;
+    --surface: #fcfdff;
+    --border: rgba(32, 52, 78, 0.12);
+    --text: #0f1b2d;
+    --muted: #4e6078;
+    --primary: #466fd8;
+    --primary-dark: #355ab8;
+    --accent: #1f9a86;
+    --shadow-soft: 0 18px 40px rgba(15, 31, 56, 0.1);
+    --strong-border: rgba(28, 46, 74, 0.22);
     --reader-font-size: 1.08rem;
     --reader-line-height: 1.75;
     --reader-max-measure: 68ch;
@@ -73,6 +73,14 @@ header {
     justify-content: space-between;
     gap: 1rem;
     flex-wrap: wrap;
+}
+.header-actions {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
 }
 .header-link {
     display: block;
@@ -226,9 +234,6 @@ footer {
     outline: 2px solid rgba(78, 95, 209, 0.35);
     outline-offset: 2px;
 }
-.reader-tools__button {
-    margin-left: auto;
-}
 .primary-button {
     padding: 0.75rem 1.5rem;
     background: var(--primary);
@@ -248,9 +253,9 @@ footer {
     transform: translateY(-1px);
 }
 .primary-button:disabled {
-    background: rgba(255, 255, 255, 0.6);
-    color: rgba(255, 255, 255, 0.7);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(70, 111, 216, 0.48);
+    color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(53, 90, 184, 0.55);
     cursor: not-allowed;
 }
 .secondary-button {
@@ -304,7 +309,7 @@ footer {
 }
 .reply-banner {
     border-left: 3px solid var(--primary-dark);
-    background: rgba(78, 95, 209, 0.12);
+    background: rgba(70, 111, 216, 0.11);
     padding: 0.8rem 1rem;
     border-radius: 0 10px 10px 0;
     margin-bottom: 1rem;
@@ -355,9 +360,9 @@ footer {
 .nav-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    background: rgba(255, 255, 255, 0.4);
-    color: rgba(255, 255, 255, 0.85);
-    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(70, 111, 216, 0.44);
+    color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(53, 90, 184, 0.55);
     box-shadow: none;
 }
 
@@ -556,11 +561,11 @@ footer {
     border-radius: 10px;
 }
 .error-message.info {
-    background: rgba(255, 238, 214, 0.5);
-    border: 1px solid rgba(255, 215, 142, 0.5);
+    background: rgba(255, 239, 210, 0.58);
+    border: 1px solid rgba(239, 191, 104, 0.5);
     padding: 0.75rem;
     border-radius: 10px;
-    color: #7f4c00;
+    color: #734400;
 }
 
 :root[data-theme="dark"] {
@@ -600,6 +605,13 @@ footer {
     background: var(--primary-dark);
     border-color: #5e97ff;
     color: #fff;
+}
+
+:root[data-theme="dark"] .primary-button:disabled,
+:root[data-theme="dark"] .nav-button:disabled {
+    background: rgba(76, 141, 255, 0.4);
+    border-color: rgba(120, 170, 255, 0.55);
+    color: rgba(232, 240, 251, 0.92);
 }
 
 :root[data-theme="dark"] .post-content {
@@ -663,10 +675,26 @@ footer {
     --reader-line-height: 1.8;
 }
 
-:root[data-reader-minimal="true"] .post-meta,
 :root[data-reader-minimal="true"] .post-footer,
 :root[data-reader-minimal="true"] .reply-banner__meta {
     display: none;
+}
+
+:root[data-reader-minimal="true"] .reader-container > .link-input-group,
+:root[data-reader-minimal="true"] .reader-tools,
+:root[data-reader-minimal="true"] .floating-controls {
+    display: none !important;
+}
+
+:root[data-reader-minimal="true"] .post-meta__left-title {
+    display: none;
+}
+
+:root[data-reader-minimal="true"] .post-meta__left-subline {
+    margin-top: 0;
+    font-size: 0.86rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
 }
 
 :root[data-reader-minimal="true"] .post-content {
@@ -679,6 +707,28 @@ footer {
 }
 
 @media (max-width: 640px) {
+    .header-actions {
+        width: auto;
+        margin-left: auto;
+        justify-content: flex-end;
+    }
+    .header-actions .theme-toggle {
+        flex: 0 0 auto;
+        font-size: 0;
+        line-height: 1;
+        width: 2.35rem;
+        height: 2.35rem;
+        min-height: 2.35rem;
+        padding: 0;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .header-actions .theme-toggle::before {
+        content: attr(data-emoji);
+        font-size: 1.12rem;
+    }
     .reader-tools {
         align-items: stretch;
         gap: 0.55rem;
@@ -686,12 +736,5 @@ footer {
     .reader-tools__field {
         flex: 1 1 46%;
         min-width: 0;
-    }
-    .reader-tools__button {
-        margin-left: 0;
-        width: 100%;
-    }
-    .reader-tools__button button {
-        width: 100%;
     }
 }
