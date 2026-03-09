@@ -157,14 +157,14 @@ footer {
     padding: 1.5rem;
     font-size: 0.9rem;
     color: var(--muted);
-    margin-top: 2rem;
+    margin-top: 0.8rem;
 }
 
 /* Reader specific styles */
 .reader-shell {
     position: relative;
     margin: 2rem auto;
-    padding-bottom: 2rem;
+    padding-bottom: 0.7rem;
     display: flex;
     justify-content: center;
 }
@@ -282,6 +282,31 @@ footer {
     padding-top: 1.5rem;
     color: var(--text);
     padding-bottom: 1.5rem;
+    position: relative;
+}
+.article-edge-nav {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: clamp(34px, 11%, 74px);
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: background 0.18s ease;
+    z-index: 2;
+}
+.article-edge-nav--left {
+    left: 0;
+}
+.article-edge-nav--right {
+    right: 0;
+}
+.article-edge-nav:disabled {
+    cursor: default;
 }
 .post-meta {
     display: flex;
@@ -702,8 +727,34 @@ footer {
     padding-top: 0.65rem;
 }
 
+:root[data-reader-minimal="true"] .article-edge-nav {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+:root[data-reader-minimal="true"] .article-edge-nav--left:hover:not(:disabled) {
+    background: linear-gradient(
+        90deg,
+        rgba(70, 111, 216, 0.12) 0%,
+        rgba(70, 111, 216, 0) 100%
+    );
+}
+
+:root[data-reader-minimal="true"]
+    .article-edge-nav--right:hover:not(:disabled) {
+    background: linear-gradient(
+        270deg,
+        rgba(70, 111, 216, 0.12) 0%,
+        rgba(70, 111, 216, 0) 100%
+    );
+}
+
 :root[data-reader-minimal="true"] .reader-container {
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-reader-minimal="true"] .reader-shell {
+    padding-bottom: 0.2rem;
 }
 
 @media (max-width: 640px) {

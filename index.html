@@ -733,6 +733,8 @@
                 const firstBtn = document.getElementById("firstPostBtn");
                 const prevBtn = document.getElementById("prevPostBtn");
                 const nextBtn = document.getElementById("nextPostBtn");
+                const edgePrev = document.getElementById("edgePrevZone");
+                const edgeNext = document.getElementById("edgeNextZone");
                 if (!firstBtn || !prevBtn || !nextBtn) {
                     return;
                 }
@@ -740,6 +742,12 @@
                 firstBtn.disabled = !hasChannel || currentPostId <= 1;
                 prevBtn.disabled = !hasChannel || currentPostId <= 1;
                 nextBtn.disabled = !hasChannel;
+                if (edgePrev) {
+                    edgePrev.disabled = !hasChannel || currentPostId <= 1;
+                }
+                if (edgeNext) {
+                    edgeNext.disabled = !hasChannel;
+                }
             }
 
             function goToAdjacentPost(delta) {
@@ -1112,6 +1120,10 @@
                     goToAdjacentPost(1);
                 document.getElementById("prevPostBtn").onclick = () =>
                     goToAdjacentPost(-1);
+                document.getElementById("edgeNextZone").onclick = () =>
+                    goToAdjacentPost(1);
+                document.getElementById("edgePrevZone").onclick = () =>
+                    goToAdjacentPost(-1);
                 document.getElementById("firstPostBtn").onclick = () => {
                     if (!currentChannel) return;
                     showReader(`https://t.me/${currentChannel}/1`);
@@ -1227,6 +1239,18 @@
                     </div>
                 </div>
                 <div id="postDisplay" class="post-content">
+                    <button
+                        id="edgePrevZone"
+                        class="article-edge-nav article-edge-nav--left"
+                        type="button"
+                        aria-label="Open previous post"
+                    ></button>
+                    <button
+                        id="edgeNextZone"
+                        class="article-edge-nav article-edge-nav--right"
+                        type="button"
+                        aria-label="Open next post"
+                    ></button>
                     <div id="postMeta" class="post-meta"></div>
                     <div id="postBody">
                         <p>
