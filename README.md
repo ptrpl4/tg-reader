@@ -1,27 +1,67 @@
 # tg-reader
 
-A serverless Progressive Web App (PWA) designed to provide a clean, customizable reading experience for Telegram posts without requiring a Telegram account.
+A frontend-only Progressive Web App (PWA) for reading public Telegram posts in a cleaner interface, without requiring a Telegram account.
 
-## Project Overview
+## Current Project State
 
-`tg-reader` is a frontend-only application that extracts content from public Telegram posts and displays them in a reader-friendly interface. It leverages client-side processing to maintain privacy and eliminate the need for backend infrastructure.
+`tg-reader` is currently a **single-page app** implemented in `index.html` (not a separate `reader.html` route).
 
-### Key Features
-- **Serverless Architecture**: No backend server required; all fetching and parsing happens client-side.
-- **PWA Support**: Installable as a standalone app with offline capabilities.
-- **Clean Reader View**: Focused on readability, extracting text and media from public Telegram links.
+### What Works Today
+- Single-page flow with two UI modes:
+  - Hero mode (project intro + quick link input)
+  - Reader mode (post loading + rendering)
+- Telegram link handling:
+  - Supports `https://t.me/<channel>/<post>` links
+  - Supports `tg://resolve?...post=...` links
+  - Normalizes links to Telegram embed format (`?embed=1`)
+- Client-side content extraction:
+  - Fetches Telegram embed HTML through public CORS proxies
+  - Parses content with `DOMParser`
+  - Renders text, links, reply context, images, and videos
+- Resilience:
+  - Multi-proxy fallback chain (`CodeTabs` -> `AllOrigins` -> `ThingProxy`)
+  - Timeout-based failover with user-visible loading state
+  - Local post cache in `localStorage`
+- Reader UX:
+  - Theme toggle (light/dark) with persisted preference
+  - URL state via query params (`?channel=<name>&post=<id>`)
+  - Basic post navigation (`First`, `Previous`, `Next`)
+- PWA baseline:
+  - `manifest.json`
+  - `service-worker.js` for asset and proxy response caching
 
-## ⚠️ AI Experiment & Risks
+## Known Gaps / Risks
 
-This project is an **AI experiment** and should be treated as such.
+- Telegram extraction relies on undocumented embed HTML that may change anytime.
+- Public CORS proxies are external dependencies and may be unstable or rate-limited.
+- `manifest.json` references icon files that are not currently present.
+- Service worker still contains stale `reader.html` cache entries and should be cleaned up.
 
-- **Undocumented Requests**: The application functions by scraping Telegram's public web embed widgets. These are undocumented interfaces that Telegram can change, rate-limit, or block at any time without notice.
-- **External Dependencies**: To bypass CORS restrictions in a serverless environment, the app currently relies on public CORS proxies.
-- **Experimental Nature**: This is a proof-of-concept exploring the limits of browser-based content extraction.
+## Near-Term Plan
 
-## Usage Note
+1. **Documentation Alignment**
+- Keep README and planning docs synchronized with actual SPA architecture.
+- Remove stale references to a separate `reader.html` page.
 
-There is no point in building or deploying this project locally yet. It is currently in a research and development phase to test the feasibility of its serverless approach.
+2. **Stability Hardening**
+- Clean service worker cache lists and fallback behavior.
+- Define and document proxy ordering, timeout policy, and failure UX.
 
----
-*Developed as an experiment in AI-assisted software engineering.*
+3. **Product Features (Incremental)**
+- UI customization improvements (themes, typography, layout options).
+- Reading features (highlights/bookmarks).
+- Shareable reader state encoded in URL (no backend).
+
+4. **Optional Extensions**
+- Local persistence enhancements (e.g., IndexedDB if needed).
+- Accessibility and media features (e.g., text-to-speech).
+
+## Repository Files (Current)
+
+- `index.html`: App shell + all reader logic
+- `styles.css`: Visual styling for hero, reader, and controls
+- `service-worker.js`: Offline/cache logic
+- `manifest.json`: PWA manifest metadata
+- `context.md`: Detailed current-state and implementation notes
+- `idea.md`: Product roadmap and phased future work
+- `REGRESSION_CHECKLIST.md`: Manual smoke/regression checklist for core flows

@@ -1,4 +1,3 @@
 .DS_Store
-idea.md
-llm.md
-context.md
+*.md
+!README.md

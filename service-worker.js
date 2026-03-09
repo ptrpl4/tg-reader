@@ -1,11 +1,10 @@
-// Simple cache-first service worker for tg-reader PWA
+// Offline-first service worker for tg-reader PWA static assets + proxy responses
 
-const CACHE_NAME = "tg-reader-cache-v3";
-const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v2";
+const CACHE_NAME = "tg-reader-cache-v4";
+const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v3";
 const urlsToCache = [
   "/",
   "index.html",
-  "reader.html",
   "manifest.json",
   "styles.css",
   "service-worker.js",
@@ -16,9 +15,13 @@ const urlsToCache = [
 const NETWORK_FIRST_ASSETS = new Set([
   "/",
   "/index.html",
-  "/reader.html",
   "/styles.css",
   "/manifest.json",
+]);
+const PROXY_HOSTNAMES = new Set([
+  "api.codetabs.com",
+  "api.allorigins.win",
+  "thingproxy.freeboard.io",
 ]);
 
 self.addEventListener("install", (event) => {
@@ -104,9 +107,8 @@ async function cacheFirst(request) {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
-  const isProxyRequest = event.request.url.includes(
-    "https://api.codetabs.com/v1/proxy",
-  );
+  const requestUrl = new URL(event.request.url);
+  const isProxyRequest = PROXY_HOSTNAMES.has(requestUrl.hostname);
   if (isProxyRequest) {
     event.respondWith(
       caches.open(POSTS_CACHE_NAME).then((cache) => {
