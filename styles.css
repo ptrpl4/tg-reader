@@ -758,6 +758,17 @@ footer {
 }
 
 @media (max-width: 640px) {
+    footer {
+        padding: 0.35rem 1.5rem 0.8rem;
+        margin-top: 0.1rem;
+    }
+    .reader-shell {
+        margin: 2rem auto 0.75rem;
+        padding-bottom: 0.35rem;
+    }
+    :root[data-reader-minimal="true"] .reader-shell {
+        padding-bottom: 0.1rem;
+    }
     .header-actions {
         width: auto;
         margin-left: auto;

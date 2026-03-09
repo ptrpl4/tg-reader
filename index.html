@@ -425,6 +425,9 @@
             let loaderMessageEl = null;
             let countdownEl = null;
             let floatingControlsEl = null;
+            let footerEl = null;
+            let floatingControlsFrameId = null;
+            const MOBILE_FLOATING_CONTROLS_QUERY = "(max-width: 960px)";
 
             function ensureLoaderElements() {
                 if (loaderOverlayEl) return;
@@ -439,6 +442,49 @@
                     document.querySelector(".floating-controls");
             }
 
+            function ensureFooterElement() {
+                if (footerEl) return;
+                footerEl = document.querySelector("footer");
+            }
+
+            function updateFloatingControlsOffset() {
+                ensureFloatingControls();
+                ensureFooterElement();
+                if (!floatingControlsEl) return;
+                if (!window.matchMedia(MOBILE_FLOATING_CONTROLS_QUERY).matches) {
+                    floatingControlsEl.style.bottom = "";
+                    return;
+                }
+                if (
+                    !floatingControlsEl.classList.contains(
+                        "floating-controls--visible",
+                    )
+                ) {
+                    floatingControlsEl.style.bottom = "";
+                    return;
+                }
+                const baseBottom = 0;
+                const footerGap = 0;
+                const footerRect = footerEl?.getBoundingClientRect();
+                if (!footerRect) {
+                    floatingControlsEl.style.bottom = `calc(${baseBottom}px + env(safe-area-inset-bottom, 0px))`;
+                    return;
+                }
+                const overlap = Math.max(
+                    window.innerHeight - footerRect.top + footerGap,
+                    0,
+                );
+                floatingControlsEl.style.bottom = `calc(${baseBottom + overlap}px + env(safe-area-inset-bottom, 0px))`;
+            }
+
+            function scheduleFloatingControlsOffsetUpdate() {
+                if (floatingControlsFrameId !== null) return;
+                floatingControlsFrameId = window.requestAnimationFrame(() => {
+                    floatingControlsFrameId = null;
+                    updateFloatingControlsOffset();
+                });
+            }
+
             function setFloatingControlsVisibility(visible) {
                 ensureFloatingControls();
                 const isVisible = Boolean(visible);
@@ -450,6 +496,7 @@
                     "aria-hidden",
                     isVisible ? "false" : "true",
                 );
+                scheduleFloatingControlsOffsetUpdate();
             }
 
             function updateCountdownText(nextServiceName) {
@@ -1158,6 +1205,29 @@
                     }
                     showHero({ pushHistory: false, replaceHistory: false });
                 });
+                window.addEventListener(
+                    "scroll",
+                    scheduleFloatingControlsOffsetUpdate,
+                    { passive: true },
+                );
+                window.addEventListener(
+                    "resize",
+                    scheduleFloatingControlsOffsetUpdate,
+                );
+                const mobileControlsMediaQuery = window.matchMedia(
+                    MOBILE_FLOATING_CONTROLS_QUERY,
+                );
+                if (mobileControlsMediaQuery.addEventListener) {
+                    mobileControlsMediaQuery.addEventListener(
+                        "change",
+                        scheduleFloatingControlsOffsetUpdate,
+                    );
+                } else if (mobileControlsMediaQuery.addListener) {
+                    mobileControlsMediaQuery.addListener(
+                        scheduleFloatingControlsOffsetUpdate,
+                    );
+                }
+                scheduleFloatingControlsOffsetUpdate();
             });
         </script>
     </head>
