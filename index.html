@@ -45,9 +45,19 @@
             const defaultTelegramLink = "https://t.me/korovany/1494";
             const POST_CACHE_STORAGE_KEY = "tg-reader-post-cache-v1";
             const THEME_STORAGE_KEY = "tg-reader-theme";
+            const READER_PREFS_STORAGE_KEY = "tg-reader-reader-prefs-v1";
             const Theme = {
                 LIGHT: "light",
                 DARK: "dark",
+            };
+            const ReaderTextSize = {
+                SMALL: "small",
+                MEDIUM: "medium",
+                LARGE: "large",
+            };
+            const ReaderDensity = {
+                COMPACT: "compact",
+                COMFORTABLE: "comfortable",
             };
             let currentChannel = null;
             let currentPostId = null;
@@ -119,6 +129,130 @@
                 } else if (mediaQuery.addListener) {
                     mediaQuery.addListener(syncWithDevice);
                 }
+            }
+
+            function normalizeReaderPreferences(raw) {
+                const textSizeValues = Object.values(ReaderTextSize);
+                const densityValues = Object.values(ReaderDensity);
+                const textSize = textSizeValues.includes(raw?.textSize)
+                    ? raw.textSize
+                    : ReaderTextSize.MEDIUM;
+                const density = densityValues.includes(raw?.density)
+                    ? raw.density
+                    : ReaderDensity.COMFORTABLE;
+                const minimal = Boolean(raw?.minimal);
+                return {
+                    textSize,
+                    density,
+                    minimal,
+                };
+            }
+
+            function getStoredReaderPreferences() {
+                try {
+                    const stored = localStorage.getItem(READER_PREFS_STORAGE_KEY);
+                    if (!stored) return null;
+                    return normalizeReaderPreferences(JSON.parse(stored));
+                } catch (error) {
+                    console.warn("Unable to read reader preferences:", error);
+                    return null;
+                }
+            }
+
+            function applyReaderPreferences(preferences, persist = true) {
+                const normalized = normalizeReaderPreferences(preferences);
+                document.documentElement.dataset.readerTextSize =
+                    normalized.textSize;
+                document.documentElement.dataset.readerDensity =
+                    normalized.density;
+                document.documentElement.dataset.readerMinimal = String(
+                    normalized.minimal,
+                );
+
+                const textSizeSelect = document.getElementById("textSizeSelect");
+                const densitySelect = document.getElementById("densitySelect");
+                const minimalModeBtn = document.getElementById("minimalModeBtn");
+                if (textSizeSelect) textSizeSelect.value = normalized.textSize;
+                if (densitySelect) densitySelect.value = normalized.density;
+                if (minimalModeBtn) {
+                    minimalModeBtn.setAttribute(
+                        "aria-pressed",
+                        String(normalized.minimal),
+                    );
+                    minimalModeBtn.textContent = normalized.minimal
+                        ? "Minimal: On"
+                        : "Minimal: Off";
+                }
+
+                if (persist) {
+                    try {
+                        localStorage.setItem(
+                            READER_PREFS_STORAGE_KEY,
+                            JSON.stringify(normalized),
+                        );
+                    } catch (error) {
+                        console.warn(
+                            "Unable to persist reader preferences:",
+                            error,
+                        );
+                    }
+                }
+            }
+
+            function initReaderTools() {
+                const stored = getStoredReaderPreferences();
+                applyReaderPreferences(
+                    stored ?? {
+                        textSize: ReaderTextSize.MEDIUM,
+                        density: ReaderDensity.COMFORTABLE,
+                        minimal: false,
+                    },
+                    false,
+                );
+
+                const textSizeSelect = document.getElementById("textSizeSelect");
+                const densitySelect = document.getElementById("densitySelect");
+                const minimalModeBtn = document.getElementById("minimalModeBtn");
+                textSizeSelect?.addEventListener("change", (event) => {
+                    applyReaderPreferences(
+                        {
+                            textSize: event.target.value,
+                            density:
+                                document.documentElement.dataset.readerDensity,
+                            minimal:
+                                document.documentElement.dataset.readerMinimal ===
+                                "true",
+                        },
+                        true,
+                    );
+                });
+                densitySelect?.addEventListener("change", (event) => {
+                    applyReaderPreferences(
+                        {
+                            textSize:
+                                document.documentElement.dataset.readerTextSize,
+                            density: event.target.value,
+                            minimal:
+                                document.documentElement.dataset.readerMinimal ===
+                                "true",
+                        },
+                        true,
+                    );
+                });
+                minimalModeBtn?.addEventListener("click", () => {
+                    applyReaderPreferences(
+                        {
+                            textSize:
+                                document.documentElement.dataset.readerTextSize,
+                            density:
+                                document.documentElement.dataset.readerDensity,
+                            minimal:
+                                document.documentElement.dataset.readerMinimal !==
+                                "true",
+                        },
+                        true,
+                    );
+                });
             }
 
             const allowedTags = new Set([
@@ -944,6 +1078,7 @@
                     showHero({ pushHistory: true, replaceHistory: true });
                 });
                 initThemeToggle();
+                initReaderTools();
                 setNavigationButtonsState();
                 window.addEventListener("popstate", (event) => {
                     const channel = event.state?.channel;
@@ -1009,7 +1144,7 @@
         </section>
 
         <div class="reader-shell page-shell">
-            <div class="reader-container" style="display: none">
+                <div class="reader-container" style="display: none">
                 <div class="link-input-group">
                     <input
                         type="text"
@@ -1019,6 +1154,33 @@
                     <button id="loadButton" class="primary-button">
                         Load Post
                     </button>
+                </div>
+                <div class="reader-tools" aria-label="Reader appearance">
+                    <div class="reader-tools__field">
+                        <label for="textSizeSelect">Text Size</label>
+                        <select id="textSizeSelect">
+                            <option value="small">Small</option>
+                            <option value="medium">Medium</option>
+                            <option value="large">Large</option>
+                        </select>
+                    </div>
+                    <div class="reader-tools__field">
+                        <label for="densitySelect">Density</label>
+                        <select id="densitySelect">
+                            <option value="compact">Compact</option>
+                            <option value="comfortable">Comfortable</option>
+                        </select>
+                    </div>
+                    <div class="reader-tools__button">
+                        <button
+                            id="minimalModeBtn"
+                            class="secondary-button"
+                            type="button"
+                            aria-pressed="false"
+                        >
+                            Minimal: Off
+                        </button>
+                    </div>
                 </div>
                 <div id="postDisplay" class="post-content">
                     <div id="postMeta" class="post-meta"></div>
