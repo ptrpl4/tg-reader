@@ -1,22 +1,29 @@
 // Offline-first service worker for tg-reader PWA static assets + proxy responses
 
-const CACHE_NAME = "tg-reader-cache-v5";
+const CACHE_NAME = "tg-reader-cache-v6";
 const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v3";
+
+// Derive base path from SW location so this works at any deployment path
+const SW_BASE = new URL("./", self.location.href).pathname;
+const APP_INDEX = new URL("index.html", self.location.href).href;
+
 const urlsToCache = [
-  "/",
-  "index.html",
-  "manifest.json",
-  "styles.css",
-  "service-worker.js",
-  "icons/icon-192x192.png",
-  "icons/icon-512x512.png",
+  new URL("./", self.location.href).href,
+  new URL("index.html", self.location.href).href,
+  new URL("manifest.json", self.location.href).href,
+  new URL("styles.css", self.location.href).href,
+  new URL("service-worker.js", self.location.href).href,
+  new URL("icons/icon-192x192.png", self.location.href).href,
+  new URL("icons/icon-512x512.png", self.location.href).href,
 ];
+
 const NETWORK_FIRST_ASSETS = new Set([
-  "/",
-  "/index.html",
-  "/styles.css",
-  "/manifest.json",
+  SW_BASE,
+  `${SW_BASE}index.html`,
+  `${SW_BASE}styles.css`,
+  `${SW_BASE}manifest.json`,
 ]);
+
 const PROXY_HOSTNAMES = new Set([
   "api.codetabs.com",
   "api.allorigins.win",
@@ -27,9 +34,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache);
-      })
+      .then((cache) => cache.addAll(urlsToCache))
       .then(() => self.skipWaiting()),
   );
 });
@@ -71,7 +76,7 @@ async function networkFirst(request) {
       return cached;
     }
     if (request.mode === "navigate") {
-      return cache.match("/index.html");
+      return cache.match(APP_INDEX);
     }
     return new Response("Offline", {
       status: 503,
@@ -94,7 +99,7 @@ async function cacheFirst(request) {
     return response;
   } catch (error) {
     if (request.mode === "navigate") {
-      return cache.match("/index.html");
+      return cache.match(APP_INDEX);
     }
     return new Response("Offline", {
       status: 503,
