@@ -6,6 +6,7 @@
         <title>Telegram Reader PWA</title>
         <link rel="manifest" href="manifest.json" />
         <link rel="stylesheet" href="styles.css" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src https://api.codetabs.com https://api.allorigins.win https://thingproxy.freeboard.io; img-src https: data:; media-src https:; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none';">
         <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {
@@ -682,7 +683,7 @@
                         ? `Open @${channel} #${postId} on Telegram`
                         : "Open on Telegram";
                 const linkHtml = canonicalLink
-                    ? `<a class="post-footer__link" href="${canonicalLink}" target="_blank" rel="noreferrer">${linkLabel}</a>`
+                    ? `<a class="post-footer__link" href="${escapeHtml(canonicalLink)}" target="_blank" rel="noreferrer">${linkLabel}</a>`
                     : "";
                 footer.innerHTML = `
                     ${infoHtml}
@@ -901,14 +902,16 @@
                         const urlMatch = style
                             ? style.match(/url\(['"]?([^'"]+)['"]?\)/)
                             : null;
-                        if (urlMatch && urlMatch[1]) {
-                            result.content += `<img src="${urlMatch[1]}" alt="Post Image">`;
+                        const imgSrc = urlMatch ? sanitizeUrl(urlMatch[1]) : null;
+                        if (imgSrc) {
+                            result.content += `<img src="${escapeHtml(imgSrc)}" alt="Post image" loading="lazy">`;
                         }
                     }
                     if (video) {
                         const videoTag = video.querySelector("video");
-                        if (videoTag && videoTag.src) {
-                            result.content += `<video controls src="${videoTag.src}"></video>`;
+                        const videoSrc = videoTag ? sanitizeUrl(videoTag.src) : null;
+                        if (videoSrc) {
+                            result.content += `<video controls src="${escapeHtml(videoSrc)}"></video>`;
                         }
                     }
                     return { success: true, data: result };
@@ -930,8 +933,9 @@
                 else metaParts.push("original message");
                 if (reply.postId) metaParts.push(`#${reply.postId}`);
                 const metaText = metaParts.join(" ");
-                const linkHtml = reply.link
-                    ? `<a href="${reply.link}" target="_blank" rel="noreferrer">View original</a>`
+                const safeReplyLink = reply.link ? sanitizeUrl(reply.link) : null;
+                const linkHtml = safeReplyLink
+                    ? `<a href="${escapeHtml(safeReplyLink)}" target="_blank" rel="noreferrer">View original</a>`
                     : "";
                 return `
                     <div class="reply-banner">
