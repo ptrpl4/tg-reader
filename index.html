@@ -925,7 +925,7 @@
                     return "";
                 }
                 const metaParts = [];
-                if (reply.author) metaParts.push(reply.author);
+                if (reply.author) metaParts.push(escapeHtml(reply.author));
                 else if (reply.channel) metaParts.push(`@${reply.channel}`);
                 else metaParts.push("original message");
                 if (reply.postId) metaParts.push(`#${reply.postId}`);
