@@ -1,6 +1,6 @@
 // Offline-first service worker for tg-reader PWA static assets + proxy responses
 
-const CACHE_NAME = "tg-reader-cache-v4";
+const CACHE_NAME = "tg-reader-cache-v5";
 const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v3";
 const urlsToCache = [
   "/",
@@ -8,9 +8,8 @@ const urlsToCache = [
   "manifest.json",
   "styles.css",
   "service-worker.js",
-  // icons can be added here if present
-  // 'icons/icon-192x192.png',
-  // 'icons/icon-512x512.png',
+  "icons/icon-192x192.png",
+  "icons/icon-512x512.png",
 ];
 const NETWORK_FIRST_ASSETS = new Set([
   "/",
