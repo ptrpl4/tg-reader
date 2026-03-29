@@ -136,11 +136,7 @@
                         /* ignore storage errors */
                     }
                 };
-                if (mediaQuery.addEventListener) {
-                    mediaQuery.addEventListener("change", syncWithDevice);
-                } else if (mediaQuery.addListener) {
-                    mediaQuery.addListener(syncWithDevice);
-                }
+                mediaQuery.addEventListener("change", syncWithDevice);
             }
 
             function normalizeReaderPreferences(raw) {
@@ -1091,9 +1087,8 @@
                 pushHistory = true,
                 replaceHistory = false,
             } = {}) {
-                document.querySelector(".hero").style.display = "";
-                document.querySelector(".reader-container").style.display =
-                    "none";
+                document.querySelector(".hero").classList.remove("hidden");
+                document.querySelector(".reader-container").classList.add("hidden");
                 document.getElementById("postBody").innerHTML =
                     `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
                 updatePostMeta(null, null);
@@ -1102,6 +1097,7 @@
                 document.getElementById("telegramLink").value = "";
                 lastCanonicalLink = null;
                 setFloatingControlsVisibility(false);
+                document.getElementById("homeLink")?.focus();
                 if (pushHistory || replaceHistory) {
                     updateHistory(null, null, replaceHistory);
                 }
@@ -1111,9 +1107,15 @@
                 link,
                 { pushHistory = true, replaceHistory = false } = {},
             ) {
-                document.querySelector(".hero").style.display = "none";
-                document.querySelector(".reader-container").style.display = "";
+                const heroEl = document.querySelector(".hero");
+                const readerEl = document.querySelector(".reader-container");
+                const switchingFromHero = !heroEl.classList.contains("hidden");
+                heroEl.classList.add("hidden");
+                readerEl.classList.remove("hidden");
                 setFloatingControlsVisibility(true);
+                if (switchingFromHero) {
+                    document.getElementById("telegramLink")?.focus();
+                }
                 if (link) {
                     document.getElementById("telegramLink").value = link;
                     loadTelegramPost(link, {
@@ -1222,16 +1224,10 @@
                 const mobileControlsMediaQuery = window.matchMedia(
                     MOBILE_FLOATING_CONTROLS_QUERY,
                 );
-                if (mobileControlsMediaQuery.addEventListener) {
-                    mobileControlsMediaQuery.addEventListener(
-                        "change",
-                        scheduleFloatingControlsOffsetUpdate,
-                    );
-                } else if (mobileControlsMediaQuery.addListener) {
-                    mobileControlsMediaQuery.addListener(
-                        scheduleFloatingControlsOffsetUpdate,
-                    );
-                }
+                mobileControlsMediaQuery.addEventListener(
+                    "change",
+                    scheduleFloatingControlsOffsetUpdate,
+                );
                 scheduleFloatingControlsOffsetUpdate();
             });
         </script>
@@ -1267,7 +1263,7 @@
                 </div>
             </div>
         </header>
-        <section class="hero page-shell">
+        <section class="hero page-shell" aria-label="Post lookup">
             <h1>Read Telegram Posts in Your Browser</h1>
             <p>
                 Access Telegram posts without needing a Telegram account. Our
@@ -1284,8 +1280,8 @@
             </div>
         </section>
 
-        <div class="reader-shell page-shell">
-                <div class="reader-container" style="display: none">
+        <div class="reader-shell page-shell" role="main" aria-label="Post reader">
+                <div class="reader-container hidden">
                 <div class="link-input-group">
                     <input
                         type="text"
