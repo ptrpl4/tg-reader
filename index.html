@@ -564,11 +564,29 @@
                 }
             }
 
+            const POST_CACHE_MAX_ENTRIES = 50;
+
+            function evictPostCache(cache) {
+                const keys = Object.keys(cache);
+                if (keys.length <= POST_CACHE_MAX_ENTRIES) return cache;
+                keys.sort(
+                    (a, b) =>
+                        (cache[a].lastOpened ?? 0) - (cache[b].lastOpened ?? 0),
+                );
+                const evict = keys.slice(
+                    0,
+                    keys.length - POST_CACHE_MAX_ENTRIES,
+                );
+                const pruned = { ...cache };
+                for (const k of evict) delete pruned[k];
+                return pruned;
+            }
+
             function persistPostCache(channel, postId, data, options = {}) {
                 if (!channel || !postId) return;
                 try {
                     const stored = localStorage.getItem(POST_CACHE_STORAGE_KEY);
-                    const cache = stored ? JSON.parse(stored) : {};
+                    let cache = stored ? JSON.parse(stored) : {};
                     const key = buildCacheKey(channel, postId);
                     const existing = cache[key] ?? {};
                     cache[key] = {
@@ -577,6 +595,7 @@
                             options.cachedAt ?? existing.cachedAt ?? Date.now(),
                         lastOpened: options.lastOpened ?? Date.now(),
                     };
+                    cache = evictPostCache(cache);
                     localStorage.setItem(
                         POST_CACHE_STORAGE_KEY,
                         JSON.stringify(cache),
@@ -592,8 +611,13 @@
                 } catch (error) {
                     stopLoadingOverlay();
                     console.error("Proxy chain failed:", error);
+                    if (error.httpStatus >= 400) {
+                        return {
+                            error: `Proxy services returned an error (HTTP ${error.httpStatus}). The post may be unavailable or the service is rate-limited — try again later.`,
+                        };
+                    }
                     return {
-                        error: "Unable to fetch the post after trying fallback services. Please try again later.",
+                        error: "Unable to reach any proxy service. Check your connection and try again.",
                     };
                 }
             }
@@ -622,9 +646,11 @@
                         signal: controller.signal,
                     });
                     if (!response.ok) {
-                        throw new Error(
+                        const err = new Error(
                             `${service.name} returned ${response.status}`,
                         );
+                        err.httpStatus = response.status;
+                        throw err;
                     }
                     const htmlString = await response.text();
                     if (showLoader) {
@@ -822,7 +848,7 @@
                     );
                     if (!messageText && !photo && !video) {
                         return {
-                            error: "Could not find post content. Is the link correct and public?",
+                            error: "No content found. The post may be private, deleted, or unavailable.",
                         };
                     }
                     const result = {
