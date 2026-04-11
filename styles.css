@@ -511,35 +511,9 @@ header {
 }
 
 /* === Post Header Row (meta + text size) === */
-.post-header-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.text-size-select {
-    appearance: none;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted-foreground);
-    border-radius: var(--radius);
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8125rem;
-    cursor: pointer;
-    flex-shrink: 0;
-    align-self: flex-start;
-}
-
-.text-size-select:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-}
-
 /* === Post Meta === */
 .post-meta {
-    flex: 1;
+    margin-bottom: 1rem;
 }
 
 .post-meta__left {
@@ -833,18 +807,6 @@ footer {
     text-decoration-color: var(--foreground);
 }
 
-/* === Reader Prefs === */
-:root[data-reader-text-size="small"] {
-    --reader-font-size: 0.9375rem;
-}
-
-:root[data-reader-text-size="medium"] {
-    --reader-font-size: 1rem;
-}
-
-:root[data-reader-text-size="large"] {
-    --reader-font-size: 1.125rem;
-}
 
 /* === Minimal Mode === */
 :root[data-reader-minimal="true"] .reader-container > .link-input-group,

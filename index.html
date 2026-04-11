@@ -55,11 +55,7 @@
                 DARK: "dark",
                 AUTO: "auto",
             };
-            const ReaderTextSize = {
-                SMALL: "small",
-                MEDIUM: "medium",
-                LARGE: "large",
-            };
+
             let currentChannel = null;
             let currentPostId = null;
             let lastCanonicalLink = null;
@@ -185,12 +181,8 @@
             }
 
             function normalizeReaderPreferences(raw) {
-                const textSizeValues = Object.values(ReaderTextSize);
-                const textSize = textSizeValues.includes(raw?.textSize)
-                    ? raw.textSize
-                    : ReaderTextSize.MEDIUM;
                 const minimal = Boolean(raw?.minimal);
-                return { textSize, minimal };
+                return { minimal };
             }
 
             function getStoredReaderPreferences() {
@@ -206,14 +198,10 @@
 
             function applyReaderPreferences(preferences, persist = true) {
                 const normalized = normalizeReaderPreferences(preferences);
-                document.documentElement.dataset.readerTextSize =
-                    normalized.textSize;
                 document.documentElement.dataset.readerMinimal = String(
                     normalized.minimal,
                 );
 
-                const textSizeSelect = document.getElementById("textSizeSelect");
-                if (textSizeSelect) textSizeSelect.value = normalized.textSize;
                 // Update mode pill
                 document
                     .getElementById("modeDefaultBtn")
@@ -252,49 +240,20 @@
             function initReaderTools() {
                 const stored = getStoredReaderPreferences();
                 applyReaderPreferences(
-                    stored ?? { textSize: ReaderTextSize.MEDIUM, minimal: false },
+                    stored ?? { minimal: false },
                     false,
                 );
 
-                document
-                    .getElementById("textSizeSelect")
-                    ?.addEventListener("change", (event) => {
-                        applyReaderPreferences(
-                            {
-                                textSize: event.target.value,
-                                minimal:
-                                    document.documentElement.dataset
-                                        .readerMinimal === "true",
-                            },
-                            true,
-                        );
-                    });
                 // Mode pill buttons
                 document
                     .getElementById("modeDefaultBtn")
                     ?.addEventListener("click", () => {
-                        applyReaderPreferences(
-                            {
-                                textSize:
-                                    document.documentElement.dataset
-                                        .readerTextSize,
-                                minimal: false,
-                            },
-                            true,
-                        );
+                        applyReaderPreferences({ minimal: false }, true);
                     });
                 document
                     .getElementById("modeMinimalBtn")
                     ?.addEventListener("click", () => {
-                        applyReaderPreferences(
-                            {
-                                textSize:
-                                    document.documentElement.dataset
-                                        .readerTextSize,
-                                minimal: true,
-                            },
-                            true,
-                        );
+                        applyReaderPreferences({ minimal: true }, true);
                     });
                 // Mobile cycle button — toggles Default ↔ Minimal
                 document
@@ -303,15 +262,7 @@
                         const isMinimal =
                             document.documentElement.dataset.readerMinimal ===
                             "true";
-                        applyReaderPreferences(
-                            {
-                                textSize:
-                                    document.documentElement.dataset
-                                        .readerTextSize,
-                                minimal: !isMinimal,
-                            },
-                            true,
-                        );
+                        applyReaderPreferences({ minimal: !isMinimal }, true);
                     });
                 window.addEventListener("keydown", (event) => {
                     if (event.defaultPrevented) return;
@@ -326,8 +277,6 @@
                     if (isTypingContext) return;
                     applyReaderPreferences(
                         {
-                            textSize:
-                                document.documentElement.dataset.readerTextSize,
                             minimal:
                                 document.documentElement.dataset.readerMinimal !==
                                 "true",
@@ -1224,15 +1173,18 @@
                 } else {
                     showHero({ pushHistory: false, replaceHistory: true });
                 }
-                document.getElementById("goToReaderBtn").onclick = () => {
+                document.getElementById("heroForm").addEventListener("submit", (e) => {
+                    e.preventDefault();
                     const rawLink = document
                         .getElementById("homeLink")
                         .value.trim();
                     const link = rawLink || defaultTelegramLink;
                     showReader(link);
-                };
-                document.getElementById("loadButton").onclick = () =>
+                });
+                document.getElementById("readerForm").addEventListener("submit", (e) => {
+                    e.preventDefault();
                     loadTelegramPost(null, { updateHistory: true });
+                });
                 document.getElementById("nextPostBtn").onclick = () =>
                     goToAdjacentPost(1);
                 document.getElementById("prevPostBtn").onclick = () =>
@@ -1343,29 +1295,29 @@
                 Enter a public Telegram post URL to read its content. Posts are
                 fetched via public proxies and cached locally for offline access.
             </p>
-            <div class="link-input-group">
+            <form class="link-input-group" id="heroForm">
                 <input
                     type="text"
                     id="homeLink"
                     placeholder="https://t.me/channel/123"
                 />
-                <button class="cta-button" id="goToReaderBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Read</button>
-            </div>
+                <button type="submit" class="cta-button" id="goToReaderBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Read</button>
+            </form>
         </section>
 
         <div class="reader-shell" role="main" aria-label="Post reader">
                 <div class="reader-container hidden">
-                <div class="link-input-group">
+                <form class="link-input-group" id="readerForm">
                     <input
                         type="text"
                         id="telegramLink"
                         placeholder="https://t.me/channel/123"
                     />
-                    <button id="loadButton" class="primary-button">
+                    <button type="submit" id="loadButton" class="primary-button">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                         Read
                     </button>
-                </div>
+                </form>
                 <div id="postDisplay" class="post-content">
                     <button
                         id="edgePrevZone"
@@ -1379,14 +1331,7 @@
                         type="button"
                         aria-label="Open next post"
                     ><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></button>
-                    <div class="post-header-row">
-                        <div id="postMeta" class="post-meta"></div>
-                        <select id="textSizeSelect" class="text-size-select" aria-label="Text size">
-                            <option value="small">S</option>
-                            <option value="medium">M</option>
-                            <option value="large">L</option>
-                        </select>
-                    </div>
+                    <div id="postMeta" class="post-meta"></div>
                     <div id="postBody">
                         <p>
                             Enter a Telegram link above and click "Load Post" to
