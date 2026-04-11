@@ -169,8 +169,11 @@ header {
     display: none;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 0.3rem 0.5rem;
+    justify-content: center;
+    position: relative;
+    height: 2.25rem;
+    padding: 0 0.5rem;
+    overflow: visible;
     border: none;
     background: transparent;
     color: var(--muted-foreground);
@@ -190,6 +193,10 @@ header {
 }
 
 .cycle-pips {
+    position: absolute;
+    bottom: -0.25rem;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     gap: 3px;
     align-items: center;
@@ -228,6 +235,7 @@ header {
     justify-content: center;
     transition: background 0.15s;
     padding: 0;
+    align-self: center;
 }
 
 .user-menu-btn:hover {
@@ -792,6 +800,12 @@ footer {
 
 
 /* === Minimal Mode === */
+@media (max-width: 742px) {
+    :root[data-reader-minimal="true"] header {
+        position: relative;
+    }
+}
+
 :root[data-reader-minimal="true"] .reader-container > .link-input-group,
 :root[data-reader-minimal="true"] .post-footer,
 :root[data-reader-minimal="true"] .reply-banner__meta {
@@ -841,6 +855,11 @@ footer {
     }
 
     .post-content {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .reader-container .link-input-group {
         padding-left: 1rem;
         padding-right: 1rem;
     }
@@ -917,7 +936,9 @@ footer {
         justify-content: center;
         position: fixed;
         top: 75%;
+        top: 75svh;
         transform: translateY(-50%);
+        will-change: transform;
         background: transparent;
         border: none;
         backdrop-filter: none;
@@ -948,6 +969,7 @@ footer {
     /* Override minimal mode rule — same style for both modes on mobile */
     :root[data-reader-minimal="true"] .article-edge-nav {
         top: 75%;
+        top: 75svh;
         background: transparent;
         border: none;
         backdrop-filter: none;

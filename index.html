@@ -63,8 +63,17 @@
             const THEME_ICONS = {
                 light: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`,
                 dark: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
-                auto: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
             };
+            const AUTO_ICONS = {
+                desktop: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+                tablet:  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="19" y1="12" x2="19.01" y2="12"/></svg>`,
+                phone:   `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`,
+            };
+            function getAutoIcon() {
+                if (window.innerWidth >= 1024) return AUTO_ICONS.desktop;
+                if (window.innerWidth >= 743) return AUTO_ICONS.tablet;
+                return AUTO_ICONS.phone;
+            }
             const MODE_ICONS = {
                 default: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
                 minimal: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
@@ -125,8 +134,13 @@
                 if (themeCycleBtn) {
                     themeCycleBtn.dataset.theme = theme;
                     themeCycleBtn.querySelector(".cycle-btn-icon").innerHTML =
-                        THEME_ICONS[theme] ?? THEME_ICONS.auto;
+                        theme === Theme.AUTO ? getAutoIcon() : THEME_ICONS[theme];
                     themeCycleBtn.setAttribute("aria-label", `Theme: ${theme}`);
+                }
+                // Update auto icon in desktop pill
+                if (theme === Theme.AUTO) {
+                    const autoBtn = document.getElementById("themeAutoBtn");
+                    if (autoBtn) autoBtn.innerHTML = getAutoIcon();
                 }
                 if (persist) {
                     try {
@@ -178,6 +192,23 @@
                             applyTheme(Theme.AUTO, Boolean(stored));
                         }
                     });
+                // Update auto icon live on resize
+                let autoIconResizeFrame = null;
+                window.addEventListener("resize", () => {
+                    if (autoIconResizeFrame) return;
+                    autoIconResizeFrame = requestAnimationFrame(() => {
+                        autoIconResizeFrame = null;
+                        const stored = getStoredTheme() ?? Theme.AUTO;
+                        if (stored !== Theme.AUTO) return;
+                        const icon = getAutoIcon();
+                        const autoBtn = document.getElementById("themeAutoBtn");
+                        if (autoBtn) autoBtn.innerHTML = icon;
+                        const cycleBtn = document.getElementById("themeCycleBtn");
+                        if (cycleBtn?.dataset.theme === Theme.AUTO) {
+                            cycleBtn.querySelector(".cycle-btn-icon").innerHTML = icon;
+                        }
+                    });
+                });
             }
 
             function normalizeReaderPreferences(raw) {
@@ -626,12 +657,16 @@
                     const commentsUrl = `https://t.me/${escapeHtml(channel)}/${postId}?comment=1`;
                     linksHtml += `<span class="post-footer__link">Open <a href="${commentsUrl}" target="_blank" rel="noreferrer">comments ${ICON_EXTERNAL_LINK}</a></span>`;
                     const oldestUrl = `https://t.me/${escapeHtml(channel)}/1`;
-                    linksHtml += `<span class="post-footer__link post-footer__link--oldest">Open <a href="${oldestUrl}" target="_blank" rel="noreferrer">oldest post in channel ${ICON_EXTERNAL_LINK}</a></span>`;
+                    linksHtml += `<span class="post-footer__link post-footer__link--oldest">Open <a class="post-footer__oldest-link" href="${oldestUrl}">oldest post in channel</a></span>`;
                 }
                 footer.innerHTML = `
                     ${infoHtml}
                     ${linksHtml ? `<div class="post-footer__link-wrap">${linksHtml}</div>` : ""}
                 `;
+                footer.querySelector(".post-footer__oldest-link")?.addEventListener("click", (e) => {
+                    e.preventDefault();
+                    showReader(`https://t.me/${channel}/1`);
+                });
             }
 
             function setStatusMessage(text = "", variant = "error") {
@@ -925,7 +960,6 @@
                 options = { updateHistory: false, replaceHistory: false },
             ) {
                 const linkInput = document.getElementById("telegramLink");
-                const loadButton = document.getElementById("loadButton");
                 const rawLink = (linkOverride ?? linkInput.value).trim();
                 if (!rawLink) {
                     setStatusMessage("Please enter a Telegram link");
@@ -976,7 +1010,6 @@
                         );
                     }
                 }
-                loadButton.disabled = true;
                 const shouldShowLoader = !cachedEntry;
                 const result = await fetchTelegramPost(normalized, {
                     showLoader: shouldShowLoader,
@@ -1005,7 +1038,6 @@
                                 statusVariant: "info",
                             },
                         );
-                        loadButton.disabled = false;
                         return;
                     }
                 }
@@ -1017,7 +1049,6 @@
                     );
                 }
                 renderPostContent(result, canonicalLink);
-                loadButton.disabled = false;
             }
 
             function showHero({
@@ -1052,9 +1083,6 @@
                 readerEl.classList.remove("hidden");
                 document.getElementById("modePill")?.classList.remove("hidden");
                 document.getElementById("modeCycleBtn")?.classList.remove("hidden");
-                if (switchingFromHero) {
-                    document.getElementById("telegramLink")?.focus();
-                }
                 if (link) {
                     document.getElementById("telegramLink").value = link;
                     loadTelegramPost(link, {
