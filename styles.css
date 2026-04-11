@@ -277,13 +277,6 @@ header {
     margin-right: auto;
 }
 
-/* === Page Shell (centering wrapper) === */
-.page-shell {
-    max-width: 896px;
-    margin: 0 auto;
-    padding: 0 1.25rem;
-}
-
 /* === Reader Shell === */
 .reader-shell {
     position: relative;
@@ -365,28 +358,6 @@ header {
     outline-offset: 3px;
 }
 
-.secondary-button {
-    padding: 0.625rem 1.125rem;
-    background: var(--secondary);
-    border: none;
-    border-radius: var(--radius);
-    color: var(--foreground);
-    cursor: pointer;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    transition: opacity 0.15s;
-}
-
-.secondary-button:hover:not(:disabled) {
-    opacity: 0.75;
-}
-
-.secondary-button:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-/* === Nav Buttons (in floating controls) === */
 /* === Post Content === */
 .post-content {
     position: relative;
@@ -398,103 +369,75 @@ header {
     padding-bottom: 3rem;
 }
 
-/* === Article Edge Nav (minimal mode arrows) === */
+/* === Article Edge Nav === */
 .article-edge-nav {
     display: none;
-    position: absolute;
-    border: none;
-    background: transparent;
-    padding: 0;
-    cursor: pointer;
-    width: 0;
-    height: 0;
-    overflow: hidden;
-}
-
-:root[data-reader-minimal="true"] .article-edge-nav {
-    display: flex;
+    position: fixed;
     align-items: center;
     justify-content: center;
-    position: fixed;
-    top: 50%;
     transform: translateY(-50%);
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 50%;
-    background: color-mix(in srgb, var(--background) 85%, transparent);
-    border: 1px solid var(--border);
-    opacity: 0.4;
     pointer-events: auto;
-    transition: opacity 0.2s;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     overflow: visible;
     color: var(--foreground);
     z-index: 40;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
 }
 
-/* Minimal mode arrow position — tablet and below only; desktop uses media query above */
-@media (max-width: 1023px) {
-    :root[data-reader-minimal="true"] .article-edge-nav--left {
-        left: 0.5rem;
-    }
-
-    :root[data-reader-minimal="true"] .article-edge-nav--right {
-        right: 0.5rem;
-    }
-}
-
-:root[data-reader-minimal="true"] .article-edge-nav:hover:not(:disabled) {
-    opacity: 1;
-}
-
-:root[data-reader-minimal="true"] .article-edge-nav:disabled {
-    opacity: 0.12;
-    cursor: not-allowed;
-}
-
-:root[data-reader-minimal="true"] .article-edge-nav:focus-visible {
+.article-edge-nav:hover:not(:disabled) { opacity: 1; }
+.article-edge-nav:disabled { opacity: 0.12; cursor: not-allowed; }
+.article-edge-nav:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
 
-/* Desktop (≥ 1024px): show edge arrows in both modes, positioned near text column */
-@media (min-width: 1024px) {
+/* Tablet + Desktop: circular button with backdrop */
+@media (min-width: 743px) {
     .article-edge-nav {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
         top: 50%;
-        transform: translateY(-50%);
         width: 2.75rem;
         height: 2.75rem;
         border-radius: 50%;
         background: color-mix(in srgb, var(--background) 85%, transparent);
         border: 1px solid var(--border);
-        opacity: 0.4;
-        pointer-events: auto;
-        transition: opacity 0.2s;
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        overflow: visible;
-        color: var(--foreground);
-        z-index: 40;
-    }
-
-    /* Positioned relative to text column (640px max, inside 896px shell + 1.25rem padding) */
-    .article-edge-nav--left { left: calc(50% - 24rem); }
-    .article-edge-nav--right { right: calc(50% - 24rem); }
-
-    .article-edge-nav:hover:not(:disabled) { opacity: 1; }
-    .article-edge-nav:disabled { opacity: 0.12; cursor: not-allowed; }
-    .article-edge-nav:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 2px;
     }
 }
 
-/* === Post Header Row (meta + text size) === */
+/* Tablet positioning */
+@media (min-width: 743px) and (max-width: 1023px) {
+    .article-edge-nav--left { left: 0.5rem; }
+    .article-edge-nav--right { right: 0.5rem; }
+}
+
+/* Desktop positioning (near text column) */
+@media (min-width: 1024px) {
+    .article-edge-nav--left { left: calc(50% - 24rem); }
+    .article-edge-nav--right { right: calc(50% - 24rem); }
+}
+
+/* Mobile: bare SVG arrows */
+@media (max-width: 742px) {
+    .article-edge-nav {
+        display: flex;
+        top: 75%;
+        top: 75svh;
+        will-change: transform;
+        width: auto;
+        height: auto;
+        padding: 0.25rem;
+    }
+    .article-edge-nav--left { left: -0.375rem; }
+    .article-edge-nav--right { right: -0.375rem; }
+    .article-edge-nav:active { opacity: 1; }
+}
+
 /* === Post Meta === */
 .post-meta {
     margin-bottom: 1rem;
@@ -876,7 +819,6 @@ footer {
     }
 }
 
-/* === Minimal mode arrows — phone override (< 743px) === */
 /* Show cycle buttons, hide pills on tablet and mobile (< 1024px) */
 @media (max-width: 1023px) {
     .cycle-btn {
@@ -893,92 +835,3 @@ footer {
     }
 }
 
-/* Tablet (743px–1023px): arrows always visible with background */
-@media (min-width: 743px) and (max-width: 1023px) {
-    .article-edge-nav {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 2.75rem;
-        height: 2.75rem;
-        border-radius: 50%;
-        background: color-mix(in srgb, var(--background) 85%, transparent);
-        border: 1px solid var(--border);
-        opacity: 0.4;
-        pointer-events: auto;
-        transition: opacity 0.2s;
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        overflow: visible;
-        color: var(--foreground);
-        z-index: 40;
-    }
-
-    .article-edge-nav--left { left: 0.5rem; }
-    .article-edge-nav--right { right: 0.5rem; }
-
-    .article-edge-nav:hover:not(:disabled) { opacity: 1; }
-    .article-edge-nav:disabled { opacity: 0.12; cursor: not-allowed; }
-    .article-edge-nav:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 2px;
-    }
-}
-
-/* Mobile (< 743px): arrows always visible, bare SVG */
-@media (max-width: 742px) {
-    .article-edge-nav {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: fixed;
-        top: 75%;
-        top: 75svh;
-        transform: translateY(-50%);
-        will-change: transform;
-        background: transparent;
-        border: none;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        box-shadow: none;
-        width: auto;
-        height: auto;
-        padding: 0.25rem;
-        opacity: 0.4;
-        pointer-events: auto;
-        transition: opacity 0.2s;
-        overflow: visible;
-        color: var(--foreground);
-        z-index: 40;
-    }
-
-    .article-edge-nav--left { left: -0.375rem; }
-    .article-edge-nav--right { right: -0.375rem; }
-
-    .article-edge-nav:hover:not(:disabled),
-    .article-edge-nav:active { opacity: 1; }
-    .article-edge-nav:disabled { opacity: 0.12; cursor: not-allowed; }
-    .article-edge-nav:focus-visible {
-        outline: 2px solid var(--primary);
-        outline-offset: 2px;
-    }
-
-    /* Override minimal mode rule — same style for both modes on mobile */
-    :root[data-reader-minimal="true"] .article-edge-nav {
-        top: 75%;
-        top: 75svh;
-        background: transparent;
-        border: none;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        box-shadow: none;
-        width: auto;
-        height: auto;
-        padding: 0.25rem;
-    }
-    :root[data-reader-minimal="true"] .article-edge-nav--left { left: -0.375rem; }
-    :root[data-reader-minimal="true"] .article-edge-nav--right { right: -0.375rem; }
-}

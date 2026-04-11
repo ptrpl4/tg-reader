@@ -30,7 +30,6 @@
                 });
             }
 
-            // Reader logic from reader.html
             function normalizeTelegramLink(link) {
                 link = link.trim();
                 const tmatch = link.match(
@@ -353,10 +352,10 @@
                     if (!["http:", "https:", "tg:"].includes(url.protocol)) {
                         return null;
                     }
+                    return url.href;
                 } catch {
                     return null;
                 }
-                return href;
             }
 
             function decodeLinkText(value) {
@@ -407,10 +406,6 @@
                 return Array.from(fragment.childNodes).map(cleanNode).join("");
             }
 
-            function buildCacheKey(channel, postId) {
-                return `${channel}/${postId}`;
-            }
-
             const proxyServices = [
                 {
                     name: "CodeTabs",
@@ -442,22 +437,8 @@
             let loaderOverlayEl = null;
             let loaderMessageEl = null;
             let countdownEl = null;
-            let footerEl = null;
-
-            function ensureLoaderElements() {
-                if (loaderOverlayEl) return;
-                loaderOverlayEl = document.getElementById("loadingOverlay");
-                loaderMessageEl = document.getElementById("loaderMessage");
-                countdownEl = document.getElementById("fallbackCountdown");
-            }
-
-            function ensureFooterElement() {
-                if (footerEl) return;
-                footerEl = document.querySelector("footer");
-            }
 
             function updateCountdownText(nextServiceName) {
-                ensureLoaderElements();
                 if (!countdownEl) return;
                 if (!nextServiceName) {
                     countdownEl.textContent = "Waiting for response…";
@@ -474,7 +455,6 @@
             }
 
             function showLoadingOverlay(serviceName, nextServiceName) {
-                ensureLoaderElements();
                 if (!loaderOverlayEl) return;
                 loaderOverlayEl.classList.add("active");
                 if (loaderMessageEl) {
@@ -501,7 +481,6 @@
             }
 
             function stopLoadingOverlay() {
-                ensureLoaderElements();
                 clearFallbackTimers();
                 if (loaderOverlayEl) {
                     loaderOverlayEl.classList.remove("active");
@@ -514,7 +493,7 @@
                     const stored = localStorage.getItem(POST_CACHE_STORAGE_KEY);
                     if (!stored) return null;
                     const parsed = JSON.parse(stored);
-                    return parsed[buildCacheKey(channel, postId)] ?? null;
+                    return parsed[`${channel}/${postId}`] ?? null;
                 } catch (error) {
                     console.warn("Unable to read post cache:", error);
                     return null;
@@ -544,7 +523,7 @@
                 try {
                     const stored = localStorage.getItem(POST_CACHE_STORAGE_KEY);
                     let cache = stored ? JSON.parse(stored) : {};
-                    const key = buildCacheKey(channel, postId);
+                    const key = `${channel}/${postId}`;
                     const existing = cache[key] ?? {};
                     cache[key] = {
                         data,
@@ -1101,6 +1080,10 @@
             }
 
             window.addEventListener("DOMContentLoaded", () => {
+                loaderOverlayEl = document.getElementById("loadingOverlay");
+                loaderMessageEl = document.getElementById("loaderMessage");
+                countdownEl = document.getElementById("fallbackCountdown");
+
                 const urlParams = new URLSearchParams(window.location.search);
                 let initialLink = null;
                 const paramChannel = urlParams.get("channel");
