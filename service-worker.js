@@ -1,6 +1,6 @@
 // Offline-first service worker for tg-reader PWA static assets + proxy responses
 
-const CACHE_NAME = "tg-reader-cache-v6";
+const CACHE_NAME = "tg-reader-cache-v7";
 const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v3";
 
 // Derive base path from SW location so this works at any deployment path
@@ -15,6 +15,19 @@ const urlsToCache = [
   new URL("service-worker.js", self.location.href).href,
   new URL("icons/icon-192x192.png", self.location.href).href,
   new URL("icons/icon-512x512.png", self.location.href).href,
+  new URL("js/theme-init.js", self.location.href).href,
+  new URL("js/main.js", self.location.href).href,
+  new URL("js/state.js", self.location.href).href,
+  new URL("js/sanitize.js", self.location.href).href,
+  new URL("js/cache.js", self.location.href).href,
+  new URL("js/loading.js", self.location.href).href,
+  new URL("js/theme.js", self.location.href).href,
+  new URL("js/reader-prefs.js", self.location.href).href,
+  new URL("js/navigation.js", self.location.href).href,
+  new URL("js/rendering.js", self.location.href).href,
+  new URL("js/sources/registry.js", self.location.href).href,
+  new URL("js/sources/telegram.js", self.location.href).href,
+  new URL("js/sources/newsletter.js", self.location.href).href,
 ];
 
 const NETWORK_FIRST_ASSETS = new Set([
@@ -59,7 +72,9 @@ self.addEventListener("activate", (event) => {
 function shouldUseNetworkFirst(request) {
   if (request.mode === "navigate") return true;
   const url = new URL(request.url);
-  return NETWORK_FIRST_ASSETS.has(url.pathname);
+  if (NETWORK_FIRST_ASSETS.has(url.pathname)) return true;
+  if (url.pathname.startsWith(SW_BASE + "js/")) return true;
+  return false;
 }
 
 async function networkFirst(request) {
