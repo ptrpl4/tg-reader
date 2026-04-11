@@ -3,13 +3,13 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Telegram Reader PWA</title>
+        <title>tg-reader</title>
         <link rel="manifest" href="manifest.json" />
         <link rel="stylesheet" href="styles.css" />
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self'; connect-src https://api.codetabs.com https://api.allorigins.win https://thingproxy.freeboard.io; img-src https: data:; media-src https:; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'none';">
         <link rel="preconnect" href="https://api.codetabs.com">
-        <meta name="theme-color" content="#f2f6fb" media="(prefers-color-scheme: light)">
-        <meta name="theme-color" content="#07111d" media="(prefers-color-scheme: dark)">
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+        <meta name="theme-color" content="#111118" media="(prefers-color-scheme: dark)">
         <script>
             if ("serviceWorker" in navigator) {
                 window.addEventListener("load", () => {
@@ -53,24 +53,39 @@
             const Theme = {
                 LIGHT: "light",
                 DARK: "dark",
+                AUTO: "auto",
             };
             const ReaderTextSize = {
                 SMALL: "small",
                 MEDIUM: "medium",
                 LARGE: "large",
             };
-            const ReaderDensity = {
-                COMPACT: "compact",
-                COMFORTABLE: "comfortable",
-            };
             let currentChannel = null;
             let currentPostId = null;
             let lastCanonicalLink = null;
 
+            const THEME_ICONS = {
+                light: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`,
+                dark: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+                auto: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+            };
+            const MODE_ICONS = {
+                default: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>`,
+                minimal: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>`,
+            };
+
+            const ICON_EXTERNAL_LINK = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+            const ICON_ALERT = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+            const ICON_INFO = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+
             function getStoredTheme() {
                 try {
                     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-                    if (stored === Theme.DARK || stored === Theme.LIGHT) {
+                    if (
+                        stored === Theme.DARK ||
+                        stored === Theme.LIGHT ||
+                        stored === Theme.AUTO
+                    ) {
                         return stored;
                     }
                 } catch (error) {
@@ -81,27 +96,41 @@
 
             function applyTheme(theme, persist = true) {
                 if (!theme) return;
-                document.documentElement.dataset.theme = theme;
-                const toggleBtn = document.getElementById("themeToggle");
-                if (toggleBtn) {
-                    toggleBtn.textContent =
-                        theme === Theme.DARK
-                            ? "Switch to Light"
-                            : "Switch to Dark";
-                    toggleBtn.setAttribute(
-                        "data-emoji",
-                        theme === Theme.DARK ? "☀️" : "🌙",
+                const prefersDark = window.matchMedia(
+                    "(prefers-color-scheme: dark)",
+                ).matches;
+                const isDark =
+                    theme === Theme.DARK ||
+                    (theme === Theme.AUTO && prefersDark);
+                document.documentElement.dataset.theme = isDark
+                    ? Theme.DARK
+                    : Theme.LIGHT;
+                // Update 3-position pill
+                const lightBtn = document.getElementById("themeLightBtn");
+                const darkBtn = document.getElementById("themeDarkBtn");
+                const autoBtn = document.getElementById("themeAutoBtn");
+                if (lightBtn)
+                    lightBtn.setAttribute(
+                        "aria-pressed",
+                        String(theme === Theme.LIGHT),
                     );
-                    toggleBtn.setAttribute(
-                        "aria-label",
-                        theme === Theme.DARK
-                            ? "Switch to light theme"
-                            : "Switch to dark theme",
-                    );
-                    toggleBtn.setAttribute(
+                if (darkBtn)
+                    darkBtn.setAttribute(
                         "aria-pressed",
                         String(theme === Theme.DARK),
                     );
+                if (autoBtn)
+                    autoBtn.setAttribute(
+                        "aria-pressed",
+                        String(theme === Theme.AUTO),
+                    );
+                // Update mobile cycle button
+                const themeCycleBtn = document.getElementById("themeCycleBtn");
+                if (themeCycleBtn) {
+                    themeCycleBtn.dataset.theme = theme;
+                    themeCycleBtn.querySelector(".cycle-btn-icon").innerHTML =
+                        THEME_ICONS[theme] ?? THEME_ICONS.auto;
+                    themeCycleBtn.setAttribute("aria-label", `Theme: ${theme}`);
                 }
                 if (persist) {
                     try {
@@ -114,48 +143,54 @@
 
             function initThemeToggle() {
                 const storedTheme = getStoredTheme();
-                const mediaQuery = window.matchMedia(
-                    "(prefers-color-scheme: dark)",
-                );
-                const prefersDark = mediaQuery.matches;
-                const initialTheme =
-                    storedTheme ?? (prefersDark ? Theme.DARK : Theme.LIGHT);
+                const initialTheme = storedTheme ?? Theme.AUTO;
                 applyTheme(initialTheme, Boolean(storedTheme));
-                const toggleBtn = document.getElementById("themeToggle");
-                toggleBtn?.addEventListener("click", () => {
-                    const nextTheme =
-                        document.documentElement.dataset.theme === Theme.DARK
-                            ? Theme.LIGHT
-                            : Theme.DARK;
-                    applyTheme(nextTheme, true);
-                });
-                const syncWithDevice = (event) => {
-                    const nextTheme = event.matches ? Theme.DARK : Theme.LIGHT;
-                    applyTheme(nextTheme, false);
-                    try {
-                        localStorage.removeItem(THEME_STORAGE_KEY);
-                    } catch {
-                        /* ignore storage errors */
-                    }
-                };
-                mediaQuery.addEventListener("change", syncWithDevice);
+                document
+                    .getElementById("themeLightBtn")
+                    ?.addEventListener("click", () =>
+                        applyTheme(Theme.LIGHT, true),
+                    );
+                document
+                    .getElementById("themeDarkBtn")
+                    ?.addEventListener("click", () =>
+                        applyTheme(Theme.DARK, true),
+                    );
+                document
+                    .getElementById("themeAutoBtn")
+                    ?.addEventListener("click", () =>
+                        applyTheme(Theme.AUTO, true),
+                    );
+                // Mobile cycle button — cycles Light → Dark → Auto → Light
+                const themeOrder = [Theme.LIGHT, Theme.DARK, Theme.AUTO];
+                document
+                    .getElementById("themeCycleBtn")
+                    ?.addEventListener("click", () => {
+                        const current = getStoredTheme() ?? Theme.AUTO;
+                        const next =
+                            themeOrder[
+                                (themeOrder.indexOf(current) + 1) %
+                                    themeOrder.length
+                            ];
+                        applyTheme(next, true);
+                    });
+                // Sync when system preference changes (active when auto is selected)
+                window
+                    .matchMedia("(prefers-color-scheme: dark)")
+                    .addEventListener("change", () => {
+                        const stored = getStoredTheme();
+                        if (!stored || stored === Theme.AUTO) {
+                            applyTheme(Theme.AUTO, Boolean(stored));
+                        }
+                    });
             }
 
             function normalizeReaderPreferences(raw) {
                 const textSizeValues = Object.values(ReaderTextSize);
-                const densityValues = Object.values(ReaderDensity);
                 const textSize = textSizeValues.includes(raw?.textSize)
                     ? raw.textSize
                     : ReaderTextSize.MEDIUM;
-                const density = densityValues.includes(raw?.density)
-                    ? raw.density
-                    : ReaderDensity.COMFORTABLE;
                 const minimal = Boolean(raw?.minimal);
-                return {
-                    textSize,
-                    density,
-                    minimal,
-                };
+                return { textSize, minimal };
             }
 
             function getStoredReaderPreferences() {
@@ -173,34 +208,29 @@
                 const normalized = normalizeReaderPreferences(preferences);
                 document.documentElement.dataset.readerTextSize =
                     normalized.textSize;
-                document.documentElement.dataset.readerDensity =
-                    normalized.density;
                 document.documentElement.dataset.readerMinimal = String(
                     normalized.minimal,
                 );
 
                 const textSizeSelect = document.getElementById("textSizeSelect");
-                const densitySelect = document.getElementById("densitySelect");
-                const minimalModeBtn = document.getElementById("minimalModeBtn");
                 if (textSizeSelect) textSizeSelect.value = normalized.textSize;
-                if (densitySelect) densitySelect.value = normalized.density;
-                if (minimalModeBtn) {
-                    minimalModeBtn.setAttribute(
-                        "aria-pressed",
-                        String(normalized.minimal),
-                    );
-                    minimalModeBtn.textContent = normalized.minimal
-                        ? "Minimal: On"
-                        : "Minimal: Off";
-                    minimalModeBtn.setAttribute(
-                        "data-emoji",
-                        normalized.minimal ? "🧾" : "📰",
-                    );
-                    minimalModeBtn.setAttribute(
+                // Update mode pill
+                document
+                    .getElementById("modeDefaultBtn")
+                    ?.setAttribute("aria-pressed", String(!normalized.minimal));
+                document
+                    .getElementById("modeMinimalBtn")
+                    ?.setAttribute("aria-pressed", String(normalized.minimal));
+                // Update mobile cycle button
+                const modeCycleBtn = document.getElementById("modeCycleBtn");
+                if (modeCycleBtn) {
+                    const modeKey = normalized.minimal ? "minimal" : "default";
+                    modeCycleBtn.dataset.mode = modeKey;
+                    modeCycleBtn.querySelector(".cycle-btn-icon").innerHTML =
+                        MODE_ICONS[modeKey];
+                    modeCycleBtn.setAttribute(
                         "aria-label",
-                        normalized.minimal
-                            ? "Minimal mode on"
-                            : "Minimal mode off",
+                        `Reading mode: ${modeKey}`,
                     );
                 }
 
@@ -222,57 +252,67 @@
             function initReaderTools() {
                 const stored = getStoredReaderPreferences();
                 applyReaderPreferences(
-                    stored ?? {
-                        textSize: ReaderTextSize.MEDIUM,
-                        density: ReaderDensity.COMFORTABLE,
-                        minimal: false,
-                    },
+                    stored ?? { textSize: ReaderTextSize.MEDIUM, minimal: false },
                     false,
                 );
 
-                const textSizeSelect = document.getElementById("textSizeSelect");
-                const densitySelect = document.getElementById("densitySelect");
-                const minimalModeBtn = document.getElementById("minimalModeBtn");
-                textSizeSelect?.addEventListener("change", (event) => {
-                    applyReaderPreferences(
-                        {
-                            textSize: event.target.value,
-                            density:
-                                document.documentElement.dataset.readerDensity,
-                            minimal:
-                                document.documentElement.dataset.readerMinimal ===
-                                "true",
-                        },
-                        true,
-                    );
-                });
-                densitySelect?.addEventListener("change", (event) => {
-                    applyReaderPreferences(
-                        {
-                            textSize:
-                                document.documentElement.dataset.readerTextSize,
-                            density: event.target.value,
-                            minimal:
-                                document.documentElement.dataset.readerMinimal ===
-                                "true",
-                        },
-                        true,
-                    );
-                });
-                minimalModeBtn?.addEventListener("click", () => {
-                    applyReaderPreferences(
-                        {
-                            textSize:
-                                document.documentElement.dataset.readerTextSize,
-                            density:
-                                document.documentElement.dataset.readerDensity,
-                            minimal:
-                                document.documentElement.dataset.readerMinimal !==
-                                "true",
-                        },
-                        true,
-                    );
-                });
+                document
+                    .getElementById("textSizeSelect")
+                    ?.addEventListener("change", (event) => {
+                        applyReaderPreferences(
+                            {
+                                textSize: event.target.value,
+                                minimal:
+                                    document.documentElement.dataset
+                                        .readerMinimal === "true",
+                            },
+                            true,
+                        );
+                    });
+                // Mode pill buttons
+                document
+                    .getElementById("modeDefaultBtn")
+                    ?.addEventListener("click", () => {
+                        applyReaderPreferences(
+                            {
+                                textSize:
+                                    document.documentElement.dataset
+                                        .readerTextSize,
+                                minimal: false,
+                            },
+                            true,
+                        );
+                    });
+                document
+                    .getElementById("modeMinimalBtn")
+                    ?.addEventListener("click", () => {
+                        applyReaderPreferences(
+                            {
+                                textSize:
+                                    document.documentElement.dataset
+                                        .readerTextSize,
+                                minimal: true,
+                            },
+                            true,
+                        );
+                    });
+                // Mobile cycle button — toggles Default ↔ Minimal
+                document
+                    .getElementById("modeCycleBtn")
+                    ?.addEventListener("click", () => {
+                        const isMinimal =
+                            document.documentElement.dataset.readerMinimal ===
+                            "true";
+                        applyReaderPreferences(
+                            {
+                                textSize:
+                                    document.documentElement.dataset
+                                        .readerTextSize,
+                                minimal: !isMinimal,
+                            },
+                            true,
+                        );
+                    });
                 window.addEventListener("keydown", (event) => {
                     if (event.defaultPrevented) return;
                     if (event.key.toLowerCase() !== "m") return;
@@ -288,8 +328,6 @@
                         {
                             textSize:
                                 document.documentElement.dataset.readerTextSize,
-                            density:
-                                document.documentElement.dataset.readerDensity,
                             minimal:
                                 document.documentElement.dataset.readerMinimal !==
                                 "true",
@@ -682,37 +720,27 @@
                 const footer = document.getElementById("postFooter");
                 if (!footer) return;
                 const cached = readPostCache(channel, postId);
-                const statusParts = [];
+                let infoHtml = "";
                 if (cached) {
                     const lastOpened =
                         cached.lastOpened ?? cached.cachedAt ?? Date.now();
-                    const formattedOpened = new Date(
-                        lastOpened,
-                    ).toLocaleString();
-                    statusParts.push(`Last opened ${formattedOpened}`);
+                    infoHtml += `<div class="post-footer__info">Last opened ${new Date(lastOpened).toLocaleString()}</div>`;
                     const cachedAt = cached.cachedAt ?? lastOpened;
                     if (cachedAt && cachedAt !== lastOpened) {
-                        const formattedCached = new Date(
-                            cachedAt,
-                        ).toLocaleString();
-                        statusParts.push(`Cached ${formattedCached}`);
+                        infoHtml += `<div class="post-footer__info">Cached ${new Date(cachedAt).toLocaleString()}</div>`;
                     }
                 }
-                const infoHtml = statusParts.length
-                    ? `<div class="post-footer__info">${statusParts.join(
-                          " • ",
-                      )}</div>`
-                    : "";
-                const linkLabel =
-                    channel && postId
-                        ? `Open @${channel} #${postId} on Telegram`
-                        : "Open on Telegram";
-                const linkHtml = canonicalLink
-                    ? `<a class="post-footer__link" href="${escapeHtml(canonicalLink)}" target="_blank" rel="noreferrer">${linkLabel}</a>`
-                    : "";
+                let linksHtml = "";
+                if (canonicalLink) {
+                    linksHtml += `<a class="post-footer__link" href="${escapeHtml(canonicalLink)}" target="_blank" rel="noreferrer">Open original ${ICON_EXTERNAL_LINK}</a>`;
+                }
+                if (channel && postId) {
+                    const commentsUrl = `https://t.me/${escapeHtml(channel)}/${postId}?comment=1`;
+                    linksHtml += `<a class="post-footer__link" href="${commentsUrl}" target="_blank" rel="noreferrer">Open comments ${ICON_EXTERNAL_LINK}</a>`;
+                }
                 footer.innerHTML = `
                     ${infoHtml}
-                    ${linkHtml ? `<div class="post-footer__link-wrap">${linkHtml}</div>` : ""}
+                    ${linksHtml ? `<div class="post-footer__link-wrap">${linksHtml}</div>` : ""}
                 `;
             }
 
@@ -720,16 +748,19 @@
                 const statusEl = document.getElementById("errorMessage");
                 if (!statusEl) return;
                 if (!text) {
-                    statusEl.textContent = "";
-                    statusEl.classList.remove("info");
-                    statusEl.classList.remove("error");
+                    statusEl.innerHTML = "";
+                    statusEl.classList.remove("info", "error");
                     statusEl.style.display = "none";
                     return;
                 }
-                statusEl.textContent = text;
+                if (variant === "info") {
+                    statusEl.innerHTML = `<div class="status-icon">${ICON_INFO}</div><span>${text}</span>`;
+                } else {
+                    statusEl.innerHTML = `<div class="status-icon">${ICON_ALERT}</div><p>${text}</p>`;
+                }
                 statusEl.classList.toggle("info", variant === "info");
                 statusEl.classList.toggle("error", variant !== "info");
-                statusEl.style.display = "block";
+                statusEl.style.display = variant === "info" ? "flex" : "block";
             }
 
             function updateHistory(channel, postId, replace = false) {
@@ -782,7 +813,7 @@
                 const channelTitle = escapeHtml(data?.title ?? "Telegram Post");
                 const sublineParts = [];
                 if (parsed.postId) {
-                    sublineParts.push(`Post #${parsed.postId}`);
+                    sublineParts.push(`#${parsed.postId}`);
                 }
                 if (data?.publishedAtLabel) {
                     sublineParts.push(data.publishedAtLabel);
@@ -793,7 +824,7 @@
                         ${
                             sublineParts.length
                                 ? `<p class="post-meta__left-subline">${sublineParts.join(
-                                      " • ",
+                                      " \u2014 ",
                                   )}</p>`
                                 : ""
                         }
@@ -1117,6 +1148,8 @@
             } = {}) {
                 document.querySelector(".hero").classList.remove("hidden");
                 document.querySelector(".reader-container").classList.add("hidden");
+                document.getElementById("modePill")?.classList.add("hidden");
+                document.getElementById("modeCycleBtn")?.classList.add("hidden");
                 document.getElementById("postBody").innerHTML =
                     `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
                 updatePostMeta(null, null);
@@ -1140,6 +1173,8 @@
                 const switchingFromHero = !heroEl.classList.contains("hidden");
                 heroEl.classList.add("hidden");
                 readerEl.classList.remove("hidden");
+                document.getElementById("modePill")?.classList.remove("hidden");
+                document.getElementById("modeCycleBtn")?.classList.remove("hidden");
                 setFloatingControlsVisibility(true);
                 if (switchingFromHero) {
                     document.getElementById("telegramLink")?.focus();
@@ -1262,80 +1297,74 @@
     </head>
     <body>
         <header>
-            <div class="header-shell page-shell">
-                <a class="header-link" id="headerLink" href="/">
-                    <div class="header-container">
-                        <h1>tg-Reader</h1>
-                        <p>
-                            Your standalone web app for reading Telegram posts
-                        </p>
-                    </div>
-                </a>
+            <div class="header-shell">
+                <a class="header-link" id="headerLink" href="/">tg-reader</a>
                 <div class="header-actions">
-                    <button
-                        id="minimalModeBtn"
-                        class="theme-toggle"
-                        type="button"
-                        aria-pressed="false"
-                    >
-                        Minimal: Off
+                    <div class="mode-pill hidden" id="modePill" role="group" aria-label="Reading mode">
+                        <button class="mode-pill-btn" id="modeDefaultBtn" type="button" aria-pressed="true">Default</button>
+                        <button class="mode-pill-btn" id="modeMinimalBtn" type="button" aria-pressed="false">Minimal</button>
+                    </div>
+                    <div class="theme-pill" role="group" aria-label="Choose theme">
+                        <button class="theme-pill-btn" id="themeLightBtn" type="button" aria-label="Light theme" aria-pressed="false">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                        </button>
+                        <button class="theme-pill-btn" id="themeDarkBtn" type="button" aria-label="Dark theme" aria-pressed="false">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                        </button>
+                        <button class="theme-pill-btn" id="themeAutoBtn" type="button" aria-label="System theme" aria-pressed="false">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </button>
+                    </div>
+                    <!-- Mobile cycle buttons (visible < 743px only) -->
+                    <button class="cycle-btn mode-cycle-btn hidden" id="modeCycleBtn" type="button" aria-label="Reading mode: default" data-mode="default">
+                        <span class="cycle-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg></span>
+                        <div class="cycle-pips" aria-hidden="true">
+                            <span class="pip"></span>
+                            <span class="pip"></span>
+                        </div>
                     </button>
-                    <button
-                        id="themeToggle"
-                        class="theme-toggle"
-                        type="button"
-                        aria-pressed="false"
-                    >
-                        Switch to Dark
+                    <button class="cycle-btn theme-cycle-btn" id="themeCycleBtn" type="button" aria-label="Theme: auto" data-theme="auto">
+                        <span class="cycle-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>
+                        <div class="cycle-pips" aria-hidden="true">
+                            <span class="pip"></span>
+                            <span class="pip"></span>
+                            <span class="pip"></span>
+                        </div>
+                    </button>
+                    <button class="user-menu-btn" id="userMenuBtn" type="button" aria-label="User menu">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </button>
                 </div>
             </div>
         </header>
-        <section class="hero page-shell" aria-label="Post lookup">
-            <h1>Read Telegram Posts in Your Browser</h1>
+        <section class="hero" aria-label="Post lookup">
+            <h1>Read Telegram posts without an account</h1>
             <p>
-                Access Telegram posts without needing a Telegram account. Our
-                PWA will display text, images, and multimedia content in a
-                clean, customizable reader interface.
+                Enter a public Telegram post URL to read its content. Posts are
+                fetched via public proxies and cached locally for offline access.
             </p>
             <div class="link-input-group">
                 <input
                     type="text"
                     id="homeLink"
-                    placeholder="e.g., https://t.me/korovany/1494"
+                    placeholder="https://t.me/channel/123"
                 />
-                <button class="cta-button" id="goToReaderBtn">Read Post</button>
+                <button class="cta-button" id="goToReaderBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Read</button>
             </div>
         </section>
 
-        <div class="reader-shell page-shell" role="main" aria-label="Post reader">
+        <div class="reader-shell" role="main" aria-label="Post reader">
                 <div class="reader-container hidden">
                 <div class="link-input-group">
                     <input
                         type="text"
                         id="telegramLink"
-                        placeholder="e.g., https://t.me/korovany/1494"
+                        placeholder="https://t.me/channel/123"
                     />
                     <button id="loadButton" class="primary-button">
-                        Load Post
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        Read
                     </button>
-                </div>
-                <div class="reader-tools" aria-label="Reader appearance">
-                    <div class="reader-tools__field">
-                        <label for="textSizeSelect">Text Size</label>
-                        <select id="textSizeSelect">
-                            <option value="small">Small</option>
-                            <option value="medium">Medium</option>
-                            <option value="large">Large</option>
-                        </select>
-                    </div>
-                    <div class="reader-tools__field">
-                        <label for="densitySelect">Density</label>
-                        <select id="densitySelect">
-                            <option value="compact">Compact</option>
-                            <option value="comfortable">Comfortable</option>
-                        </select>
-                    </div>
                 </div>
                 <div id="postDisplay" class="post-content">
                     <button
@@ -1343,14 +1372,21 @@
                         class="article-edge-nav article-edge-nav--left"
                         type="button"
                         aria-label="Open previous post"
-                    ></button>
+                    ><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
                     <button
                         id="edgeNextZone"
                         class="article-edge-nav article-edge-nav--right"
                         type="button"
                         aria-label="Open next post"
-                    ></button>
-                    <div id="postMeta" class="post-meta"></div>
+                    ><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></button>
+                    <div class="post-header-row">
+                        <div id="postMeta" class="post-meta"></div>
+                        <select id="textSizeSelect" class="text-size-select" aria-label="Text size">
+                            <option value="small">S</option>
+                            <option value="medium">M</option>
+                            <option value="large">L</option>
+                        </select>
+                    </div>
                     <div id="postBody">
                         <p>
                             Enter a Telegram link above and click "Load Post" to
@@ -1364,38 +1400,43 @@
                     class="loading-overlay"
                     aria-live="polite"
                 >
-                    <div class="loading-inner">
-                        <div class="loader-spinner" aria-hidden="true"></div>
-                        <p id="loaderMessage">Loading…</p>
-                        <p
-                            id="fallbackCountdown"
-                            class="fallback-countdown"
-                        ></p>
+                    <div class="skeleton-post" aria-hidden="true">
+                        <div class="skeleton-line skeleton-line--title"></div>
+                        <div class="skeleton-line skeleton-line--meta"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line skeleton-line--short"></div>
+                        <div class="skeleton-line skeleton-line--gap"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line skeleton-line--short2"></div>
                     </div>
+                    <p id="loaderMessage" class="sr-only">Loading…</p>
+                    <p id="fallbackCountdown" class="sr-only"></p>
                 </div>
-                <p
+                <div
                     id="errorMessage"
                     class="error-message"
+                    aria-live="polite"
                     style="display: none"
-                ></p>
+                ></div>
             </div>
             <div class="floating-controls" aria-label="Post navigation">
-                <button id="prevPostBtn" class="nav-button primary-button">
-                    Previous
-                </button>
-                <button id="firstPostBtn" class="nav-button primary-button">
-                    First
-                </button>
-                <button id="nextPostBtn" class="nav-button primary-button">
-                    Next
-                </button>
+                <div class="floating-nav-inner">
+                    <button id="firstPostBtn" class="nav-btn" type="button" aria-label="Go to first post">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+                        <span>First</span>
+                    </button>
+                    <button id="prevPostBtn" class="nav-btn" type="button" aria-label="Go to previous post">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                        <span>Previous</span>
+                    </button>
+                    <button id="nextPostBtn" class="nav-btn" type="button" aria-label="Go to next post">
+                        <span>Next</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
-        <footer>
-            <p>
-                Powered by pure JavaScript and modern web technologies • Works
-                offline • No server required
-            </p>
-        </footer>
+        <footer></footer>
     </body>
 </html>
