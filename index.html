@@ -411,10 +411,7 @@
             let loaderOverlayEl = null;
             let loaderMessageEl = null;
             let countdownEl = null;
-            let floatingControlsEl = null;
             let footerEl = null;
-            let floatingControlsFrameId = null;
-            const MOBILE_FLOATING_CONTROLS_QUERY = "(max-width: 960px)";
 
             function ensureLoaderElements() {
                 if (loaderOverlayEl) return;
@@ -423,67 +420,9 @@
                 countdownEl = document.getElementById("fallbackCountdown");
             }
 
-            function ensureFloatingControls() {
-                if (floatingControlsEl) return;
-                floatingControlsEl =
-                    document.querySelector(".floating-controls");
-            }
-
             function ensureFooterElement() {
                 if (footerEl) return;
                 footerEl = document.querySelector("footer");
-            }
-
-            function updateFloatingControlsOffset() {
-                ensureFloatingControls();
-                ensureFooterElement();
-                if (!floatingControlsEl) return;
-                if (!window.matchMedia(MOBILE_FLOATING_CONTROLS_QUERY).matches) {
-                    floatingControlsEl.style.bottom = "";
-                    return;
-                }
-                if (
-                    !floatingControlsEl.classList.contains(
-                        "floating-controls--visible",
-                    )
-                ) {
-                    floatingControlsEl.style.bottom = "";
-                    return;
-                }
-                const baseBottom = 0;
-                const footerGap = 0;
-                const footerRect = footerEl?.getBoundingClientRect();
-                if (!footerRect) {
-                    floatingControlsEl.style.bottom = `calc(${baseBottom}px + env(safe-area-inset-bottom, 0px))`;
-                    return;
-                }
-                const overlap = Math.max(
-                    window.innerHeight - footerRect.top + footerGap,
-                    0,
-                );
-                floatingControlsEl.style.bottom = `calc(${baseBottom + overlap}px + env(safe-area-inset-bottom, 0px))`;
-            }
-
-            function scheduleFloatingControlsOffsetUpdate() {
-                if (floatingControlsFrameId !== null) return;
-                floatingControlsFrameId = window.requestAnimationFrame(() => {
-                    floatingControlsFrameId = null;
-                    updateFloatingControlsOffset();
-                });
-            }
-
-            function setFloatingControlsVisibility(visible) {
-                ensureFloatingControls();
-                const isVisible = Boolean(visible);
-                floatingControlsEl?.classList.toggle(
-                    "floating-controls--visible",
-                    isVisible,
-                );
-                floatingControlsEl?.setAttribute(
-                    "aria-hidden",
-                    isVisible ? "false" : "true",
-                );
-                scheduleFloatingControlsOffsetUpdate();
             }
 
             function updateCountdownText(nextServiceName) {
@@ -681,11 +620,13 @@
                 }
                 let linksHtml = "";
                 if (canonicalLink) {
-                    linksHtml += `<a class="post-footer__link" href="${escapeHtml(canonicalLink)}" target="_blank" rel="noreferrer">Open original ${ICON_EXTERNAL_LINK}</a>`;
+                    linksHtml += `<span class="post-footer__link">Open <a href="${escapeHtml(canonicalLink)}" target="_blank" rel="noreferrer">original ${ICON_EXTERNAL_LINK}</a></span>`;
                 }
                 if (channel && postId) {
                     const commentsUrl = `https://t.me/${escapeHtml(channel)}/${postId}?comment=1`;
-                    linksHtml += `<a class="post-footer__link" href="${commentsUrl}" target="_blank" rel="noreferrer">Open comments ${ICON_EXTERNAL_LINK}</a>`;
+                    linksHtml += `<span class="post-footer__link">Open <a href="${commentsUrl}" target="_blank" rel="noreferrer">comments ${ICON_EXTERNAL_LINK}</a></span>`;
+                    const oldestUrl = `https://t.me/${escapeHtml(channel)}/1`;
+                    linksHtml += `<span class="post-footer__link post-footer__link--oldest">Open <a href="${oldestUrl}" target="_blank" rel="noreferrer">oldest post in channel ${ICON_EXTERNAL_LINK}</a></span>`;
                 }
                 footer.innerHTML = `
                     ${infoHtml}
@@ -762,7 +703,7 @@
                 const channelTitle = escapeHtml(data?.title ?? "Telegram Post");
                 const sublineParts = [];
                 if (parsed.postId) {
-                    sublineParts.push(`#${parsed.postId}`);
+                    sublineParts.push(`Post #${parsed.postId}`);
                 }
                 if (data?.publishedAtLabel) {
                     sublineParts.push(data.publishedAtLabel);
@@ -783,24 +724,12 @@
             }
 
             function setNavigationButtonsState() {
-                const firstBtn = document.getElementById("firstPostBtn");
-                const prevBtn = document.getElementById("prevPostBtn");
-                const nextBtn = document.getElementById("nextPostBtn");
                 const edgePrev = document.getElementById("edgePrevZone");
                 const edgeNext = document.getElementById("edgeNextZone");
-                if (!firstBtn || !prevBtn || !nextBtn) {
-                    return;
-                }
                 const hasChannel = Boolean(currentChannel && currentPostId);
-                firstBtn.disabled = !hasChannel || currentPostId <= 1;
-                prevBtn.disabled = !hasChannel || currentPostId <= 1;
-                nextBtn.disabled = !hasChannel;
-                if (edgePrev) {
-                    edgePrev.disabled = !hasChannel || currentPostId <= 1;
-                }
-                if (edgeNext) {
-                    edgeNext.disabled = !hasChannel;
-                }
+                const atStart = !hasChannel || currentPostId <= 1;
+                if (edgePrev) edgePrev.disabled = atStart;
+                if (edgeNext) edgeNext.disabled = !hasChannel;
             }
 
             function goToAdjacentPost(delta) {
@@ -1106,7 +1035,6 @@
                 updatePostFooter(null, null, null);
                 document.getElementById("telegramLink").value = "";
                 lastCanonicalLink = null;
-                setFloatingControlsVisibility(false);
                 document.getElementById("homeLink")?.focus();
                 if (pushHistory || replaceHistory) {
                     updateHistory(null, null, replaceHistory);
@@ -1124,7 +1052,6 @@
                 readerEl.classList.remove("hidden");
                 document.getElementById("modePill")?.classList.remove("hidden");
                 document.getElementById("modeCycleBtn")?.classList.remove("hidden");
-                setFloatingControlsVisibility(true);
                 if (switchingFromHero) {
                     document.getElementById("telegramLink")?.focus();
                 }
@@ -1185,18 +1112,10 @@
                     e.preventDefault();
                     loadTelegramPost(null, { updateHistory: true });
                 });
-                document.getElementById("nextPostBtn").onclick = () =>
-                    goToAdjacentPost(1);
-                document.getElementById("prevPostBtn").onclick = () =>
-                    goToAdjacentPost(-1);
                 document.getElementById("edgeNextZone").onclick = () =>
                     goToAdjacentPost(1);
                 document.getElementById("edgePrevZone").onclick = () =>
                     goToAdjacentPost(-1);
-                document.getElementById("firstPostBtn").onclick = () => {
-                    if (!currentChannel) return;
-                    showReader(`https://t.me/${currentChannel}/1`);
-                };
                 const headerLinkEl = document.getElementById("headerLink");
                 headerLinkEl?.addEventListener("click", (event) => {
                     event.preventDefault();
@@ -1227,23 +1146,6 @@
                     }
                     showHero({ pushHistory: false, replaceHistory: false });
                 });
-                window.addEventListener(
-                    "scroll",
-                    scheduleFloatingControlsOffsetUpdate,
-                    { passive: true },
-                );
-                window.addEventListener(
-                    "resize",
-                    scheduleFloatingControlsOffsetUpdate,
-                );
-                const mobileControlsMediaQuery = window.matchMedia(
-                    MOBILE_FLOATING_CONTROLS_QUERY,
-                );
-                mobileControlsMediaQuery.addEventListener(
-                    "change",
-                    scheduleFloatingControlsOffsetUpdate,
-                );
-                scheduleFloatingControlsOffsetUpdate();
             });
         </script>
     </head>
@@ -1364,22 +1266,6 @@
                     aria-live="polite"
                     style="display: none"
                 ></div>
-            </div>
-            <div class="floating-controls" aria-label="Post navigation">
-                <div class="floating-nav-inner">
-                    <button id="firstPostBtn" class="nav-btn" type="button" aria-label="Go to first post">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
-                        <span>First</span>
-                    </button>
-                    <button id="prevPostBtn" class="nav-btn" type="button" aria-label="Go to previous post">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-                        <span>Previous</span>
-                    </button>
-                    <button id="nextPostBtn" class="nav-btn" type="button" aria-label="Go to next post">
-                        <span>Next</span>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
-                    </button>
-                </div>
             </div>
         </div>
         <footer></footer>

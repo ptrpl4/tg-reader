@@ -379,69 +379,6 @@ header {
 }
 
 /* === Nav Buttons (in floating controls) === */
-.nav-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.5rem 0.875rem;
-    background: var(--secondary);
-    border: none;
-    border-radius: calc(var(--radius) - 1px);
-    color: var(--foreground);
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: opacity 0.15s;
-    min-height: 2.75rem;
-    white-space: nowrap;
-}
-
-.nav-btn:hover:not(:disabled) {
-    opacity: 0.75;
-}
-
-.nav-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-}
-
-.nav-btn:focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-}
-
-/* === Floating Nav === */
-.floating-controls {
-    position: fixed;
-    bottom: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: 0.875rem;
-    padding: 0.375rem;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    z-index: 50;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition:
-        opacity 0.2s,
-        visibility 0.2s;
-}
-
-.floating-controls--visible {
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-}
-
-.floating-nav-inner {
-    display: flex;
-    gap: 0.25rem;
-    align-items: center;
-}
-
 /* === Post Content === */
 .post-content {
     position: relative;
@@ -488,12 +425,15 @@ header {
     z-index: 40;
 }
 
-:root[data-reader-minimal="true"] .article-edge-nav--left {
-    left: 0.5rem;
-}
+/* Minimal mode arrow position — tablet and below only; desktop uses media query above */
+@media (max-width: 1023px) {
+    :root[data-reader-minimal="true"] .article-edge-nav--left {
+        left: 0.5rem;
+    }
 
-:root[data-reader-minimal="true"] .article-edge-nav--right {
-    right: 0.5rem;
+    :root[data-reader-minimal="true"] .article-edge-nav--right {
+        right: 0.5rem;
+    }
 }
 
 :root[data-reader-minimal="true"] .article-edge-nav:hover:not(:disabled) {
@@ -508,6 +448,42 @@ header {
 :root[data-reader-minimal="true"] .article-edge-nav:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
+}
+
+/* Desktop (≥ 1024px): show edge arrows in both modes, positioned near text column */
+@media (min-width: 1024px) {
+    .article-edge-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 2.75rem;
+        height: 2.75rem;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--background) 85%, transparent);
+        border: 1px solid var(--border);
+        opacity: 0.4;
+        pointer-events: auto;
+        transition: opacity 0.2s;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        overflow: visible;
+        color: var(--foreground);
+        z-index: 40;
+    }
+
+    /* Positioned relative to text column (640px max, inside 896px shell + 1.25rem padding) */
+    .article-edge-nav--left { left: calc(50% - 24rem); }
+    .article-edge-nav--right { right: calc(50% - 24rem); }
+
+    .article-edge-nav:hover:not(:disabled) { opacity: 1; }
+    .article-edge-nav:disabled { opacity: 0.12; cursor: not-allowed; }
+    .article-edge-nav:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+    }
 }
 
 /* === Post Header Row (meta + text size) === */
@@ -647,21 +623,28 @@ header {
 }
 
 .post-footer__link {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.post-footer__link a {
     color: var(--foreground);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    font-size: 0.875rem;
     border-bottom: 1px solid transparent;
     transition: border-color 0.15s;
 }
 
-.post-footer__link:hover {
+.post-footer__link a:hover {
     border-color: var(--foreground);
 }
 
-.post-footer__link:focus-visible {
+.post-footer__link a:focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
     border-radius: 2px;
@@ -810,7 +793,6 @@ footer {
 
 /* === Minimal Mode === */
 :root[data-reader-minimal="true"] .reader-container > .link-input-group,
-:root[data-reader-minimal="true"] .floating-controls,
 :root[data-reader-minimal="true"] .post-footer,
 :root[data-reader-minimal="true"] .reply-banner__meta {
     display: none !important;
@@ -867,14 +849,6 @@ footer {
         padding-top: 2.5rem;
     }
 
-    /* Hide nav button labels on very small screens */
-    .floating-nav-inner .nav-btn span {
-        display: none;
-    }
-
-    .floating-nav-inner .nav-btn {
-        padding: 0.5rem 0.75rem;
-    }
 }
 
 @media (max-width: 360px) {
@@ -900,12 +874,8 @@ footer {
     }
 }
 
-/* Tablet (743px–1023px): arrows always visible with background, no floating nav */
+/* Tablet (743px–1023px): arrows always visible with background */
 @media (min-width: 743px) and (max-width: 1023px) {
-    .floating-controls {
-        display: none !important;
-    }
-
     .article-edge-nav {
         display: flex;
         align-items: center;
@@ -939,12 +909,8 @@ footer {
     }
 }
 
-/* Mobile (< 743px): arrows always visible, bare SVG, no floating nav */
+/* Mobile (< 743px): arrows always visible, bare SVG */
 @media (max-width: 742px) {
-    .floating-controls {
-        display: none !important;
-    }
-
     .article-edge-nav {
         display: flex;
         align-items: center;
@@ -978,4 +944,19 @@ footer {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
     }
+
+    /* Override minimal mode rule — same style for both modes on mobile */
+    :root[data-reader-minimal="true"] .article-edge-nav {
+        top: 75%;
+        background: transparent;
+        border: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        box-shadow: none;
+        width: auto;
+        height: auto;
+        padding: 0.25rem;
+    }
+    :root[data-reader-minimal="true"] .article-edge-nav--left { left: -0.375rem; }
+    :root[data-reader-minimal="true"] .article-edge-nav--right { right: -0.375rem; }
 }
