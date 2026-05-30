@@ -136,7 +136,9 @@ export function renderPostContent(
     }
     const { content } = postData.data;
     const replySection = buildReplySection(postData.data.reply);
-    document.getElementById("postBody").innerHTML = `
+    const postBody = document.getElementById("postBody");
+    postBody.dataset.source = source;
+    postBody.innerHTML = `
         ${replySection}
         ${content}
     `;

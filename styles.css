@@ -490,18 +490,50 @@ header {
 .post-content .text-block {
     line-height: var(--reader-line-height);
     font-size: var(--reader-font-size);
-    white-space: pre-wrap;
     word-break: break-word;
     color: var(--foreground);
     max-width: var(--reader-max-measure);
 }
-
-.post-content h2 {
-    color: var(--foreground);
-    margin-top: 0;
-    font-size: 1.125rem;
-    font-weight: 500;
+#postBody[data-source="telegram"] .text-block {
+    white-space: pre-wrap;
 }
+
+.post-content h1,
+.post-content h2,
+.post-content h3 {
+    color: var(--foreground);
+    margin: 1.5rem 0 0.5rem;
+    font-weight: 700;
+}
+.post-content h1 { font-size: 1.5rem; }
+.post-content h2 { font-size: 1.25rem; }
+.post-content h3 { font-size: 1.125rem; }
+.post-content h1:first-child,
+.post-content h2:first-child,
+.post-content h3:first-child { margin-top: 0; }
+
+.post-content hr {
+    border: none;
+    border-top: 3px solid var(--border);
+    margin: 0.75rem 0 0.25rem;
+}
+
+.post-content hr[data-divider="accent"] {
+    border-top-color: #ff5335;
+}
+
+.post-content hr[data-divider="muted"] {
+    border-top-width: 2px;
+    border-top-color: #eaeaea;
+}
+
+.post-content .text-block + .text-block {
+    margin-top: 0;
+}
+
+.post-content [data-align="center"] { text-align: center; }
+.post-content [data-align="right"] { text-align: right; }
+.post-content [data-align="left"] { text-align: left; }
 
 .post-content img {
     max-width: 100%;
@@ -537,6 +569,32 @@ header {
 
 .post-content a:hover {
     text-decoration-color: var(--foreground);
+}
+
+#postBody[data-source="newsletter"] .post-content {
+    font-family: Georgia, Times, "Times New Roman", serif;
+}
+
+#postBody[data-source="newsletter"] .img-caption {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    margin-top: -0.75rem;
+}
+
+#postBody[data-source="newsletter"] a {
+    color: var(--link-color, #ff5335);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+#postBody[data-source="newsletter"] a:hover {
+    text-decoration: underline;
+}
+
+#postBody[data-source="newsletter"] br {
+    display: inline;
+    content: none;
+    margin: 0;
 }
 
 .post-content b,

@@ -3,6 +3,12 @@ import { appState, proxyServices } from "../state.js";
 import { escapeHtml, sanitizeUrl, sanitizeMessageHtml } from "../sanitize.js";
 import { showLoadingOverlay, stopLoadingOverlay, clearFallbackTimers } from "../loading.js";
 
+const NBSP = "\xA0";
+const WS_RE = new RegExp(`[\\s${NBSP}]`);
+const TRIM_START_RE = new RegExp(`^(<br\\s*/?>|[\\s${NBSP}]|<div[^>]*>[\\s${NBSP}]*</div>)+`);
+const TRIM_END_RE = new RegExp(`(<br\\s*/?>|[\\s${NBSP}])+$`);
+const EMPTY_RE = new RegExp(`^[\\s${NBSP}]*(<br\\s*/?>)*[\\s${NBSP}]*$`);
+
 class NewsletterAdapter extends SourceAdapter {
     static canHandle(url) {
         return /mailchi\.mp\//.test(url) || /campaign-archive\.com/.test(url);
@@ -95,6 +101,14 @@ class NewsletterAdapter extends SourceAdapter {
         }
     }
 
+    _promoteAlignment(el) {
+        for (const child of el.querySelectorAll("div, p")) {
+            const style = child.getAttribute("style") || "";
+            const m = style.match(/text-align:\s*(center|right|left)/);
+            if (m) child.setAttribute("data-align", m[1]);
+        }
+    }
+
     _parseContent(htmlString, sourceUrl) {
         try {
             const parser = new DOMParser();
@@ -115,17 +129,40 @@ class NewsletterAdapter extends SourceAdapter {
 
             let content = "";
             for (const section of sections) {
-                const blocks = section.querySelectorAll(".mcnTextContent, img");
+                const blocks = section.querySelectorAll(".mcnTextContent, .mcnDividerContent, img");
                 for (const el of blocks) {
                     if (el.closest(".mcnTextContent") && el.tagName === "IMG") continue;
+                    if (el.classList.contains("mcnDividerContent")) {
+                        const borderStyle = el.getAttribute("style") || "";
+                        const colorMatch = borderStyle.match(/border-top:\s*\d+px\s+solid\s+(#[0-9a-fA-F]+)/);
+                        if (colorMatch) {
+                            const accent = colorMatch[1].toUpperCase() === "#FF5335" ? "accent" : "muted";
+                            content += `<hr data-divider="${accent}">`;
+                        }
+                        continue;
+                    }
                     if (el.tagName === "IMG") {
                         const src = sanitizeUrl(el.getAttribute("src"));
                         if (src) {
-                            content += `<div class="text-block"><img src="${escapeHtml(src)}" alt="${escapeHtml(el.getAttribute("alt") || "")}" loading="lazy"></div>`;
+                            content += `<div class="text-block"><img src="${escapeHtml(src)}" alt="" loading="lazy"></div>`;
+                            const td = el.closest("td");
+                            if (td) {
+                                for (const p of td.querySelectorAll("p")) {
+                                    const caption = sanitizeMessageHtml(p).trim()
+                                        .replace(TRIM_START_RE, "")
+                                        .replace(TRIM_END_RE, "");
+                                    if (caption && !EMPTY_RE.test(caption)) {
+                                        content += `<div class="text-block img-caption">${caption}</div>`;
+                                    }
+                                }
+                            }
                         }
                     } else {
-                        const safeHtml = sanitizeMessageHtml(el).trim();
-                        if (safeHtml) {
+                        this._promoteAlignment(el);
+                        const safeHtml = sanitizeMessageHtml(el).trim()
+                            .replace(TRIM_START_RE, "")
+                            .replace(TRIM_END_RE, "");
+                        if (safeHtml && !EMPTY_RE.test(safeHtml)) {
                             content += `<div class="text-block">${safeHtml}</div>`;
                         }
                     }
