@@ -27,6 +27,7 @@ class TelegramAdapter extends SourceAdapter {
             channel: match[1],
             postId: Number(match[2]),
             cleanLink: clean,
+            source: "telegram",
         };
     }
 

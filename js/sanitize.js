@@ -1,5 +1,5 @@
 const allowedTags = new Set([
-    "a", "b", "strong", "em", "i", "u", "span", "p", "div", "br", "code", "pre",
+    "a", "b", "strong", "em", "i", "u", "span", "p", "div", "br", "code", "pre", "img",
 ]);
 
 export function escapeHtml(value) {
@@ -55,6 +55,12 @@ export function sanitizeMessageHtml(element) {
         const inner = Array.from(node.childNodes).map(cleanNode).join("");
         if (tag === "br") {
             return "<br />";
+        }
+        if (tag === "img") {
+            const src = sanitizeUrl(node.getAttribute("src"));
+            if (!src) return "";
+            const alt = escapeHtml(node.getAttribute("alt") || "");
+            return `<img src="${escapeHtml(src)}" alt="${alt}" loading="lazy">`;
         }
         if (tag === "a") {
             const href = sanitizeUrl(node.getAttribute("href"));

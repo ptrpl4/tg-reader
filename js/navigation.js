@@ -1,14 +1,23 @@
 import { appState } from "./state.js";
+import { detectSource } from "./sources/registry.js";
 
 export function updateHistory(channel, postId, replace = false) {
     const params = new URLSearchParams();
-    if (channel) params.set("channel", channel);
-    if (postId) params.set("post", postId);
+    if (channel && postId) {
+        // Check if this is a Telegram-style channel/postId (numeric postId)
+        if (typeof postId === "number" || /^\d+$/.test(postId)) {
+            params.set("channel", channel);
+            params.set("post", postId);
+        } else {
+            // Generic source — store the canonical link
+            params.set("url", appState.lastCanonicalLink);
+        }
+    }
     const query = params.toString();
     const url = query
         ? `${window.location.pathname}?${query}`
         : window.location.pathname;
-    const state = { channel, postId };
+    const state = { channel, postId, url: appState.lastCanonicalLink };
     if (replace) {
         window.history.replaceState(state, "", url);
     } else {
@@ -19,8 +28,11 @@ export function updateHistory(channel, postId, replace = false) {
 export function setNavigationButtonsState() {
     const edgePrev = document.getElementById("edgePrevZone");
     const edgeNext = document.getElementById("edgeNextZone");
-    const hasChannel = Boolean(appState.currentChannel && appState.currentPostId);
-    const atStart = !hasChannel || appState.currentPostId <= 1;
+    const currentUrl = appState.lastCanonicalLink;
+    const adapter = currentUrl ? detectSource(currentUrl) : null;
+    const navigable = adapter?.supportsNavigation() &&
+        Boolean(appState.currentChannel && appState.currentPostId);
+    const atStart = !navigable || appState.currentPostId <= 1;
     if (edgePrev) edgePrev.disabled = atStart;
-    if (edgeNext) edgeNext.disabled = !hasChannel;
+    if (edgeNext) edgeNext.disabled = !navigable;
 }

@@ -57,7 +57,7 @@ async function loadPost(
 
     const adapter = detectSource(rawLink);
     if (!adapter) {
-        setStatusMessage("Unsupported link format. Currently only Telegram post URLs are supported.");
+        setStatusMessage("Unsupported link format. Try a Telegram post or Mailchimp newsletter URL.");
         return;
     }
 
@@ -147,7 +147,7 @@ function showHero({ pushHistory = true, replaceHistory = false } = {}) {
     document.getElementById("modePill")?.classList.add("hidden");
     document.getElementById("modeCycleBtn")?.classList.add("hidden");
     document.getElementById("postBody").innerHTML =
-        `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
+        `<p>Enter a link above and click "Read" to see the content.</p>`;
     updatePostMeta(null, null, parseLinkViaAdapter);
     setStatusMessage();
     updatePostFooter(null, null, null, showReader);
@@ -174,7 +174,7 @@ function showReader(link, { pushHistory = true, replaceHistory = false } = {}) {
         });
     } else {
         document.getElementById("postBody").innerHTML =
-            `<p>Enter a Telegram link above and click "Load Post" to see the content.</p>`;
+            `<p>Enter a link above and click "Read" to see the content.</p>`;
         updatePostMeta(null, null, parseLinkViaAdapter);
         setStatusMessage();
         updatePostFooter(null, null, null, showReader);
@@ -192,20 +192,19 @@ document.addEventListener("DOMContentLoaded", () => {
     let initialLink = null;
     const paramChannel = urlParams.get("channel");
     const paramPost = urlParams.get("post");
+    const paramUrl = urlParams.get("url");
     if (paramChannel && paramPost) {
         initialLink = `https://t.me/${paramChannel}/${paramPost}`;
+    } else if (paramUrl) {
+        const adapter = detectSource(paramUrl);
+        if (adapter) initialLink = paramUrl;
     } else {
         const legacyLink = urlParams.get("link");
         if (legacyLink) {
             const adapter = detectSource(legacyLink);
             if (adapter) {
                 const normalized = adapter.normalize(legacyLink);
-                if (normalized) {
-                    const parsed = adapter.parse(normalized);
-                    if (parsed?.channel && parsed?.postId) {
-                        initialLink = `https://t.me/${parsed.channel}/${parsed.postId}`;
-                    }
-                }
+                if (normalized) initialLink = normalized;
             }
         }
     }
@@ -242,8 +241,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setNavigationButtonsState();
 
     window.addEventListener("popstate", (event) => {
+        const stateUrl = event.state?.url;
         const channel = event.state?.channel;
         const postId = event.state?.postId;
+        if (stateUrl) {
+            showReader(stateUrl, { pushHistory: false, replaceHistory: false });
+            return;
+        }
         if (channel && postId) {
             showReader(`https://t.me/${channel}/${postId}`, {
                 pushHistory: false,
@@ -252,6 +256,11 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         const params = new URLSearchParams(window.location.search);
+        const pu = params.get("url");
+        if (pu) {
+            showReader(pu, { pushHistory: false, replaceHistory: false });
+            return;
+        }
         const pc = params.get("channel");
         const pp = params.get("post");
         if (pc && pp) {

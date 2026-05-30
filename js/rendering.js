@@ -60,7 +60,7 @@ export function updatePostMeta(normalizedLink, data, parseLinkFn) {
     setNavigationButtonsState();
 }
 
-export function updatePostFooter(channel, postId, canonicalLink, showReaderFn) {
+export function updatePostFooter(channel, postId, canonicalLink, showReaderFn, { source = "telegram" } = {}) {
     const footer = document.getElementById("postFooter");
     if (!footer) return;
     const cached = readPostCache(channel, postId);
@@ -77,7 +77,7 @@ export function updatePostFooter(channel, postId, canonicalLink, showReaderFn) {
     if (canonicalLink) {
         linksHtml += `<span class="post-footer__link">Open <a href="${escapeHtml(canonicalLink)}" target="_blank" rel="noreferrer">original ${ICON_EXTERNAL_LINK}</a></span>`;
     }
-    if (channel && postId) {
+    if (source === "telegram" && channel && postId) {
         const commentsUrl = `https://t.me/${escapeHtml(channel)}/${postId}?comment=1`;
         linksHtml += `<span class="post-footer__link">Open <a href="${commentsUrl}" target="_blank" rel="noreferrer">comments ${ICON_EXTERNAL_LINK}</a></span>`;
         linksHtml += `<span class="post-footer__link">Open <a class="post-footer__oldest-link" href="https://t.me/${escapeHtml(channel)}/1">oldest post in channel</a></span>`;
@@ -127,10 +127,11 @@ export function renderPostContent(
     const variant = overrideStatusText !== null ? statusVariant : "error";
     setStatusMessage(statusText, variant);
     const openLink = parsed?.cleanLink ?? canonicalLink ?? null;
+    const source = parsed?.source ?? postData.data?.source ?? "telegram";
     if (!postData.success || !postData.data) {
         document.getElementById("postBody").innerHTML = "";
         updatePostMeta(canonicalLink, null, parseLinkFn);
-        updatePostFooter(parsed?.channel ?? null, parsed?.postId ?? null, openLink, showReaderFn);
+        updatePostFooter(parsed?.channel ?? null, parsed?.postId ?? null, openLink, showReaderFn, { source });
         return;
     }
     const { content } = postData.data;
@@ -140,5 +141,5 @@ export function renderPostContent(
         ${content}
     `;
     updatePostMeta(canonicalLink, postData.data, parseLinkFn);
-    updatePostFooter(parsed?.channel ?? null, parsed?.postId ?? null, openLink, showReaderFn);
+    updatePostFooter(parsed?.channel ?? null, parsed?.postId ?? null, openLink, showReaderFn, { source });
 }

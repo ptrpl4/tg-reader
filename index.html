@@ -58,16 +58,17 @@
             </div>
         </header>
         <section class="hero" aria-label="Post lookup">
-            <h1>Read Telegram posts without an account</h1>
+            <h1>Read posts without an account</h1>
             <p>
-                Enter a public Telegram post URL to read its content. Posts are
-                fetched via public proxies and cached locally for offline access.
+                Enter a public Telegram post or Mailchimp newsletter URL to read
+                its content. Posts are fetched via public proxies and cached
+                locally for offline access.
             </p>
             <form class="link-input-group" id="heroForm">
                 <input
                     type="text"
                     id="homeLink"
-                    placeholder="https://t.me/channel/123"
+                    placeholder="https://t.me/channel/123 or mailchi.mp/..."
                     aria-label="Post URL"
                 />
                 <button type="submit" class="cta-button" id="goToReaderBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Read</button>
@@ -80,7 +81,7 @@
                     <input
                         type="text"
                         id="telegramLink"
-                        placeholder="https://t.me/channel/123"
+                        placeholder="https://t.me/channel/123 or mailchi.mp/..."
                         aria-label="Post URL"
                     />
                     <button type="submit" id="loadButton" class="primary-button">
@@ -104,7 +105,7 @@
                     <div id="postMeta" class="post-meta"></div>
                     <div id="postBody">
                         <p>
-                            Enter a Telegram link above and click "Load Post" to
+                            Enter a link above and click "Read" to
                             see the content.
                         </p>
                     </div>
