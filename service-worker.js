@@ -1,6 +1,6 @@
 // Offline-first service worker for tg-reader PWA static assets + proxy responses
 
-const CACHE_NAME = "tg-reader-cache-v19";
+const CACHE_NAME = "tg-reader-cache-v20";
 const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v3";
 
 // Derive base path from SW location so this works at any deployment path

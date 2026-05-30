@@ -42,7 +42,7 @@ export function updatePostMeta(normalizedLink, data, parseLinkFn) {
     appState.currentPostId = parsed.postId;
     const channelTitle = escapeHtml(data?.title ?? "Telegram Post");
     const sublineParts = [];
-    if (parsed.postId) {
+    if (parsed.postId && parsed.source !== "newsletter") {
         sublineParts.push(`Post #${parsed.postId}`);
     }
     if (data?.publishedAtLabel) {
