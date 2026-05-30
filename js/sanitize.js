@@ -55,6 +55,9 @@ export function sanitizeMessageHtml(element) {
             if (size >= 5) tag = "h2";
             else if (size >= 4) tag = "h3";
         }
+        if (tag === "span" && node.getAttribute("data-heading") === "true") {
+            tag = "h2";
+        }
         if (!allowedTags.has(tag)) {
             return Array.from(node.childNodes).map(cleanNode).join("");
         }

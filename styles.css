@@ -63,6 +63,17 @@ header {
     z-index: 10;
 }
 
+.scroll-progress {
+    position: sticky;
+    top: 3.5rem;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: #ff5335;
+    z-index: 9;
+    transition: width 0.1s linear;
+}
+
 .header-shell {
     max-width: 896px;
     margin: 0 auto;
@@ -512,6 +523,15 @@ header {
 .post-content h2:first-child,
 .post-content h3:first-child { margin-top: 0; }
 
+.post-content h2[id] {
+    cursor: pointer;
+    scroll-margin-top: 4rem;
+}
+
+.post-content h2[id]:hover {
+    color: var(--muted-foreground);
+}
+
 .post-content hr {
     border: none;
     border-top: 3px solid var(--border);
@@ -595,6 +615,32 @@ header {
     display: inline;
     content: none;
     margin: 0;
+}
+
+.section-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.section-nav a {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    background: var(--secondary);
+    border-radius: 1rem;
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s;
+}
+
+.section-nav a:hover {
+    color: var(--foreground);
+    background: var(--border);
 }
 
 .post-content b,

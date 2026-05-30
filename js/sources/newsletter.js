@@ -101,11 +101,18 @@ class NewsletterAdapter extends SourceAdapter {
         }
     }
 
-    _promoteAlignment(el) {
+    _promoteAttributes(el) {
         for (const child of el.querySelectorAll("div, p")) {
             const style = child.getAttribute("style") || "";
             const m = style.match(/text-align:\s*(center|right|left)/);
             if (m) child.setAttribute("data-align", m[1]);
+        }
+        for (const span of el.querySelectorAll("span")) {
+            const style = span.getAttribute("style") || "";
+            const sizeMatch = style.match(/font-size:\s*(\d+)px/);
+            if (sizeMatch && parseInt(sizeMatch[1], 10) >= 22) {
+                span.setAttribute("data-heading", "true");
+            }
         }
     }
 
@@ -128,6 +135,8 @@ class NewsletterAdapter extends SourceAdapter {
             }
 
             let content = "";
+            const toc = [];
+            let sectionIdx = 0;
             for (const section of sections) {
                 const blocks = section.querySelectorAll(".mcnTextContent, .mcnDividerContent, img");
                 for (const el of blocks) {
@@ -158,11 +167,22 @@ class NewsletterAdapter extends SourceAdapter {
                             }
                         }
                     } else {
-                        this._promoteAlignment(el);
+                        this._promoteAttributes(el);
                         const safeHtml = sanitizeMessageHtml(el).trim()
                             .replace(TRIM_START_RE, "")
                             .replace(TRIM_END_RE, "");
                         if (safeHtml && !EMPTY_RE.test(safeHtml)) {
+                            const headingMatch = safeHtml.match(/<h2>(.*?)<\/h2>/);
+                            if (headingMatch) {
+                                const headingText = headingMatch[1].replace(/<[^>]*>/g, "").replace(/&nbsp;|\xA0/g, "").trim();
+                                if (headingText && /\p{L}/u.test(headingText) && !headingText.startsWith("http")) {
+                                    const id = `section-${sectionIdx++}`;
+                                    toc.push({ id, title: headingText });
+                                    const anchored = safeHtml.replace(/<h2>/, `<h2 id="${id}">`);
+                                    content += `<div class="text-block">${anchored}</div>`;
+                                    continue;
+                                }
+                            }
                             content += `<div class="text-block">${safeHtml}</div>`;
                         }
                     }
@@ -178,6 +198,7 @@ class NewsletterAdapter extends SourceAdapter {
                 data: {
                     title,
                     content,
+                    toc,
                     source: "newsletter",
                     canonicalUrl: sourceUrl,
                 },

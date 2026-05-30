@@ -9,11 +9,10 @@ export function updateHistory(channel, postId, replace = false) {
             params.set("channel", channel);
             params.set("post", postId);
         } else {
-            // Generic source — store the canonical link
             params.set("url", appState.lastCanonicalLink);
         }
     }
-    const query = params.toString();
+    const query = params.toString().replace(/%3A/gi, ":").replace(/%2F/gi, "/");
     const url = query
         ? `${window.location.pathname}?${query}`
         : window.location.pathname;

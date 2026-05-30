@@ -11,6 +11,7 @@ import {
     renderPostContent,
 } from "./rendering.js";
 import { detectSource } from "./sources/registry.js";
+import { initScrollProgress } from "./scroll-progress.js";
 
 // Register all source adapters (side-effect imports)
 import "./sources/telegram.js";
@@ -238,6 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     initThemeToggle();
     initReaderTools();
+    initScrollProgress();
     setNavigationButtonsState();
 
     window.addEventListener("popstate", (event) => {

@@ -1,6 +1,6 @@
 // Offline-first service worker for tg-reader PWA static assets + proxy responses
 
-const CACHE_NAME = "tg-reader-cache-v15";
+const CACHE_NAME = "tg-reader-cache-v19";
 const POSTS_CACHE_NAME = "tg-reader-proxy-cache-v3";
 
 // Derive base path from SW location so this works at any deployment path
@@ -25,6 +25,7 @@ const urlsToCache = [
   new URL("js/reader-prefs.js", self.location.href).href,
   new URL("js/navigation.js", self.location.href).href,
   new URL("js/rendering.js", self.location.href).href,
+  new URL("js/scroll-progress.js", self.location.href).href,
   new URL("js/sources/registry.js", self.location.href).href,
   new URL("js/sources/telegram.js", self.location.href).href,
   new URL("js/sources/newsletter.js", self.location.href).href,

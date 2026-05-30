@@ -2,6 +2,7 @@ import { appState, ICON_EXTERNAL_LINK, ICON_ALERT, ICON_INFO } from "./state.js"
 import { escapeHtml, sanitizeUrl } from "./sanitize.js";
 import { readPostCache } from "./cache.js";
 import { setNavigationButtonsState } from "./navigation.js";
+import { resetScrollProgress } from "./scroll-progress.js";
 
 export function setStatusMessage(text = "", variant = "error") {
     const statusEl = document.getElementById("errorMessage");
@@ -116,6 +117,24 @@ export function buildReplySection(reply) {
     `;
 }
 
+let sectionObserver = null;
+
+function observeSections(headings) {
+    if (sectionObserver) sectionObserver.disconnect();
+    sectionObserver = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+            if (entry.isIntersecting) {
+                const hash = `#${entry.target.id}`;
+                if (window.location.hash !== hash) {
+                    history.replaceState(history.state, "", hash);
+                }
+                break;
+            }
+        }
+    }, { rootMargin: "-80px 0px -70% 0px" });
+    headings.forEach(h => sectionObserver.observe(h));
+}
+
 export function renderPostContent(
     postData,
     normalizedLink,
@@ -134,7 +153,7 @@ export function renderPostContent(
         updatePostFooter(parsed?.channel ?? null, parsed?.postId ?? null, openLink, showReaderFn, { source });
         return;
     }
-    const { content } = postData.data;
+    const { content, toc } = postData.data;
     const replySection = buildReplySection(postData.data.reply);
     const postBody = document.getElementById("postBody");
     postBody.dataset.source = source;
@@ -142,6 +161,23 @@ export function renderPostContent(
         ${replySection}
         ${content}
     `;
+    const sectionHeadings = postBody.querySelectorAll("h2[id]");
+    sectionHeadings.forEach(h2 => {
+        h2.addEventListener("click", () => {
+            const url = new URL(window.location.href);
+            url.hash = h2.id;
+            navigator.clipboard?.writeText(url.toString());
+            h2.scrollIntoView({ behavior: "smooth", block: "start" });
+            history.replaceState(history.state, "", url.toString());
+        });
+    });
+    if (sectionHeadings.length) {
+        observeSections(sectionHeadings);
+    }
+    if (postData.data.title) {
+        document.title = postData.data.title;
+    }
+    resetScrollProgress();
     updatePostMeta(canonicalLink, postData.data, parseLinkFn);
     updatePostFooter(parsed?.channel ?? null, parsed?.postId ?? null, openLink, showReaderFn, { source });
 }
